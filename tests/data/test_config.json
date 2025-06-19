@@ -1,0 +1,116 @@
+{
+  "audio": {
+    "sample_rate": 44100.0,
+    "buffer_size": 256,
+    "channels": 2,
+    "output_device": "test_device",
+    "enable_exclusive_mode": false,
+    "latency_mode": "low"
+  },
+  "string": {
+    "tension_base": 800.0,
+    "damping": 0.002,
+    "stiffness": 2e-5,
+    "density": 7850.0,
+    "discretization_points": 50,
+    "coupling_strength": 0.05
+  },
+  "hammer": {
+    "mass": 0.008,
+    "stiffness": 8e5,
+    "damping": 80.0,
+    "contact_time": 0.0015,
+    "felt_hardness": 0.6,
+    "velocity_scaling": 1.2
+  },
+  "soundboard": {
+    "area": 0.3,
+    "thickness": 0.008,
+    "density": 450.0,
+    "damping": 0.015,
+    "resonance_strength": 0.5,
+    "coupling_factor": 0.2
+  },
+  "resonance": {
+    "max_harmonics": 16,
+    "harmonic_decay": 0.75,
+    "sympathetic_resonance": 0.05,
+    "string_coupling": true,
+    "soundboard_coupling": true
+  },
+  "synthesis": {
+    "max_voices": 32,
+    "note_off_fade_time": 0.05,
+    "velocity_sensitivity": 0.02,
+    "master_volume": 0.6,
+    "polyphony_mode": "unlimited",
+    "voice_stealing": "oldest"
+  },
+  "midi": {
+    "device_name": "Test MIDI Device",
+    "auto_detect": false,
+    "velocity_curve": 1.1,
+    "hammer_response_curve": 0.9,
+    "channel_filter": -1,
+    "transpose": 0,
+    "enable_aftertouch": true,
+    "enable_pitch_bend": true
+  },
+  "pedals": {
+    "sustain_threshold": 64,
+    "soft_threshold": 64,
+    "sostenuto_threshold": 64,
+    "sustain_curve": 1.0,
+    "soft_effect_strength": 0.4,
+    "sostenuto_mode": "realistic"
+  },
+  "recording": {
+    "mp3_bitrate": 128,
+    "mp3_quality": 7,
+    "output_directory": "./test_recordings/",
+    "auto_filename": true,
+    "filename_format": "test_%Y%m%d_%H%M%S.mp3",
+    "enable_normalization": false,
+    "normalization_level": -6.0
+  },
+  "room": {
+    "size": 5.0,
+    "reverb_time": 0.8,
+    "damping": 0.5,
+    "early_reflections": false,
+    "late_reverb": false,
+    "room_type": "studio"
+  },
+  "tuning": {
+    "reference_frequency": 440.0,
+    "temperament": "equal",
+    "master_tuning": 0.0,
+    "stretch_tuning": 0.0,
+    "individual_note_tuning": {}
+  },
+  "performance": {
+    "audio_thread_priority": "normal",
+    "midi_thread_priority": "normal",
+    "buffer_prefill": 1,
+    "cpu_optimization": "auto",
+    "memory_pool_size": 16,
+    "enable_multithreading": false
+  },
+  "user_interface": {
+    "enable_cli": false,
+    "log_level": "debug",
+    "log_to_file": false,
+    "log_filename": "test_piano_synth.log",
+    "show_performance_stats": true,
+    "enable_hot_reload": false
+  },
+  "advanced": {
+    "string_nonlinearity": 0.05,
+    "hammer_felt_compression": true,
+    "soundboard_vibration_modes": 6,
+    "air_absorption": 0.0005,
+    "temperature_compensation": 20.0,
+    "humidity_compensation": 50.0,
+    "enable_experimental_features": true
+  }
+}

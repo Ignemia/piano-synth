@@ -1,0 +1,83 @@
+{
+  "piano_instrument": {
+    "version": "1.0.0",
+    "instrument_info": {
+      "name": "Physical Model Piano",
+      "type": "piano",
+      "polyphony": 256,
+      "channels": 16,
+      "note_range": {
+        "min": 21,
+        "max": 108
+      }
+    },
+    "physical_modeling": {
+      "string_model": {
+        "tension_variation": 1.0,
+        "inharmonicity": 0.0001,
+        "decay_time_scaling": 1.0,
+        "sympathetic_resonance": 0.3,
+        "string_coupling": 0.1
+      },
+      "hammer_model": {
+        "mass_variation": 1.0,
+        "felt_compression": 0.5,
+        "hammer_noise": 0.05,
+        "velocity_to_force_curve": 2.0,
+        "contact_time_ms": 2.0
+      },
+      "soundboard": {
+        "resonance_strength": 0.4,
+        "damping": 0.3,
+        "frequency_response": "realistic",
+        "coupling_strength": 0.6
+      },
+      "damper_model": {
+        "damping_strength": 0.8,
+        "release_time_ms": 100,
+        "position_noise": 0.02
+      }
+    },
+    "effects": {
+      "reverb": {
+        "enabled": true,
+        "room_size": 0.5,
+        "damping": 0.5,
+        "wet_level": 0.3,
+        "dry_level": 0.7
+      },
+      "chorus": {
+        "enabled": false,
+        "rate": 0.5,
+        "depth": 0.1,
+        "feedback": 0.3
+      },
+      "eq": {
+        "enabled": true,
+        "low_gain": 1.0,
+        "mid_gain": 1.0,
+        "high_gain": 1.0,
+        "low_freq": 200,
+        "high_freq": 8000
+      }
+    },
+    "dynamics": {
+      "velocity_curve": "realistic",
+      "dynamic_range_db": 60,
+      "note_velocity_scaling": 1.0,
+      "pedal_dynamics": true
+    },
+    "tuning": {
+      "temperament": "equal",
+      "base_frequency": 440.0,
+      "stretch_tuning": 0.0,
+      "global_detune_cents": 0.0
+    },
+    "performance": {
+      "max_cpu_usage": 0.6,
+      "voice_stealing": "oldest",
+      "note_priority": "velocity",
+      "fast_attack_optimization": true
+    }
+  }
+}

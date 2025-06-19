@@ -1,0 +1,62 @@
+{
+  "output_processor": {
+    "version": "1.0.0",
+    "audio_output": {
+      "backend": "auto",
+      "available_backends": ["alsa", "portaudio", "jack", "bare_metal_gpio"],
+      "device_selection": "auto",
+      "sample_rate": 44100,
+      "buffer_size": 512,
+      "bit_depth": 32,
+      "channels": 2
+    },
+    "alsa": {
+      "device": "default",
+      "period_size": 256,
+      "periods": 4,
+      "format": "float32_le"
+    },
+    "portaudio": {
+      "api": "auto",
+      "device": -1,
+      "stream_flags": ["clip_off", "dither_off"]
+    },
+    "bare_metal": {
+      "gpio_pins": {
+        "left_channel": 18,
+        "right_channel": 19,
+        "clock": 20,
+        "enable": 21
+      },
+      "dac_resolution": 16,
+      "output_voltage_range": "0-3.3V",
+      "pwm_frequency": 100000
+    },
+    "volume_control": {
+      "master_volume": 0.8,
+      "channel_balance": [1.0, 1.0],
+      "volume_smoothing": 0.01,
+      "mute_on_startup": false
+    },
+    "recording": {
+      "default_format": "wav",
+      "supported_formats": ["wav", "mp3", "flac"],
+      "default_sample_rate": 44100,
+      "default_bit_depth": 24,
+      "auto_normalize": false,
+      "recording_path": "./recordings"
+    },
+    "latency": {
+      "target_latency_ms": 10,
+      "max_acceptable_latency_ms": 50,
+      "adaptive_buffer_sizing": true,
+      "underrun_recovery": "automatic"
+    },
+    "monitoring": {
+      "enable_level_monitoring": true,
+      "peak_hold_time_ms": 500,
+      "enable_clipping_detection": true,
+      "log_audio_stats": false
+    }
+  }
+}

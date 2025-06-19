@@ -1,0 +1,464 @@
+#include "piano_synthesizer.h"
+#include "../utils/logger.h"
+#include "../utils/constants.h"
+#include "../utils/math_utils.h"
+#include <algorithm>
+#include <chrono>
+
+namespace PianoSynth {
+namespace Synthesis {
+
+// Voice Implementation
+Voice::Voice(int note_num) 
+    : note_number(note_num),
+      active(false),
+      amplitude(0.0f),
+      frequency(0.0f),
+      age(0.0),
+      sustain_pedal_active(false),
+      note_off_received(false),
+      note_off_time(0.0) {
+    
+    string_model = std::make_unique<Physics::StringModel>(note_number);
+    hammer_model = std::make_unique<Physics::HammerModel>(note_number);
+}
+
+Voice::~Voice() = default;
+
+void Voice::initialize(double sample_rate) {
+    string_model->initialize(sample_rate);
+    hammer_model->initialize(sample_rate);
+    frequency = Utils::MathUtils::midiToFrequency(note_number);
+}
+
+void Voice::noteOn(const Abstraction::NoteEvent& event) {
+    active = true;
+    note_off_received = false;
+    amplitude = event.velocity;
+    age = 0.0;
+    sustain_pedal_active = event.sustain_pedal;
+    
+    // Reset models
+    string_model->reset();
+    hammer_model->reset();
+    
+    // Configure string based on note event
+    string_model->setDamperPosition(event.damper_position);
+    
+    // Strike the string with hammer
+    hammer_model->strike(event.hammer_velocity);
+    string_model->excite(0.125, event.string_excitation, 0.001); // Strike at 1/8 position
+    
+    Utils::Logger logger;
+    logger.debug("Voice " + std::to_string(note_number) + " note on: velocity=" + 
+                std::to_string(event.velocity) + " hammer_vel=" + std::to_string(event.hammer_velocity));
+}
+
+void Voice::noteOff(const Abstraction::NoteEvent& event) {
+    note_off_received = true;
+    note_off_time = age;
+    
+    // If sustain pedal is not active, start release immediately
+    if (!sustain_pedal_active) {
+        string_model->setDamperPosition(0.0); // Apply damper
+    }
+    
+    Utils::Logger logger;
+    logger.debug("Voice " + std::to_string(note_number) + " note off");
+}
+
+double Voice::generateSample() {
+    if (!active) {
+        return 0.0;
+    }
+    
+    // Get hammer force
+    double string_displacement = string_model->step();
+    double hammer_force = hammer_model->step(string_displacement);
+    
+    // Update envelope
+    updateEnvelope(1.0 / Constants::SAMPLE_RATE);
+    
+    // Apply amplitude envelope
+    double output = string_displacement * amplitude;
+    
+    // Apply soft clipping to prevent harsh sounds
+    output = Utils::DSPUtils::softClip(output, 0.8);
+    
+    return output;
+}
+
+void Voice::updateEnvelope(double dt) {
+    age += dt;
+    
+    // Natural decay over time
+    double decay_rate = 0.1; // Decay rate per second
+    amplitude *= (1.0 - decay_rate * dt);
+    
+    // Apply note-off envelope if needed
+    if (note_off_received && !sustain_pedal_active) {
+        double release_time = Constants::NOTE_OFF_FADE_TIME;
+        double time_since_off = age - note_off_time;
+        
+        if (time_since_off > 0.0) {
+            double release_factor = 1.0 - (time_since_off / release_time);
+            release_factor = std::max(0.0, release_factor);
+            amplitude *= release_factor;
+        }
+    }
+    
+    // Deactivate voice if amplitude is too low
+    if (amplitude < 0.001) {
+        active = false;
+    }
+}
+
+bool Voice::shouldRelease() const {
+    return !active || amplitude < 0.001;
+}
+
+// PianoSynthesizer Implementation
+PianoSynthesizer::PianoSynthesizer()
+    : max_voices_(Constants::MAX_VOICES),
+      sample_rate_(Constants::SAMPLE_RATE),
+      pedal_damping_(0.0f),
+      string_tension_(1.0f),
+      master_tuning_(0.0f),
+      velocity_sensitivity_(Constants::VELOCITY_SENSITIVITY),
+      config_manager_(nullptr) {
+    
+    resonance_model_ = std::make_unique<Physics::ResonanceModel>();
+}
+
+PianoSynthesizer::~PianoSynthesizer() {
+    shutdown();
+}
+
+bool PianoSynthesizer::initialize(Utils::ConfigManager* config_manager) {
+    Utils::Logger logger;
+    logger.info("Initializing Piano Synthesizer...");
+    
+    config_manager_ = config_manager;
+    
+    if (config_manager_) {
+        // Load configuration
+        sample_rate_ = config_manager_->getDouble("audio.sample_rate", Constants::SAMPLE_RATE);
+        max_voices_ = config_manager_->getInt("synthesis.max_voices", Constants::MAX_VOICES);
+        velocity_sensitivity_ = config_manager_->getDouble("synthesis.velocity_sensitivity", Constants::VELOCITY_SENSITIVITY);
+    }
+    
+    // Initialize resonance model
+    resonance_model_->initialize(sample_rate_, Constants::NUM_KEYS);
+    
+    // Pre-allocate voice pool
+    voice_pool_.reserve(max_voices_);
+    for (int i = 0; i < max_voices_; ++i) {
+        auto voice = std::make_unique<Voice>(60); // Default to middle C
+        voice->initialize(sample_rate_);
+        voice_pool_.push_back(std::move(voice));
+    }
+    
+    // Initialize audio buffer
+    audio_buffer_.resize(Constants::BUFFER_SIZE * Constants::CHANNELS);
+    string_outputs_.resize(Constants::NUM_KEYS, 0.0);
+    
+    logger.info("Piano Synthesizer initialized with " + std::to_string(max_voices_) + " voices");
+    return true;
+}
+
+void PianoSynthesizer::shutdown() {
+    Utils::Logger logger;
+    logger.info("Shutting down Piano Synthesizer...");
+    
+    // Clear all active voices
+    active_voices_.clear();
+    voice_pool_.clear();
+    
+    logger.info("Piano Synthesizer shutdown complete");
+}
+
+void PianoSynthesizer::processNoteEvent(const Abstraction::NoteEvent& event) {
+    switch (event.type) {
+        case Abstraction::NoteEvent::NOTE_ON:
+            {
+                Voice* voice = allocateVoice(event.note_number);
+                if (voice) {
+                    voice->noteOn(event);
+                }
+            }
+            break;
+            
+        case Abstraction::NoteEvent::NOTE_OFF:
+            {
+                auto it = active_voices_.find(event.note_number);
+                if (it != active_voices_.end()) {
+                    it->second->noteOff(event);
+                }
+            }
+            break;
+            
+        case Abstraction::NoteEvent::PEDAL_CHANGE:
+            // Update sustain pedal state for all active voices
+            for (auto& pair : active_voices_) {
+                pair.second->sustain_pedal_active = event.sustain_pedal;
+                
+                // If sustain pedal released and note off received, apply damper
+                if (!event.sustain_pedal && pair.second->note_off_received) {
+                    pair.second->string_model->setDamperPosition(0.0);
+                }
+            }
+            break;
+            
+        default:
+            break;
+    }
+}
+
+std::vector<float> PianoSynthesizer::generateAudioBuffer(int buffer_size) {
+    // Clear audio buffer
+    clearAudioBuffer();
+    
+    if (buffer_size != static_cast<int>(audio_buffer_.size() / Constants::CHANNELS)) {
+        audio_buffer_.resize(buffer_size * Constants::CHANNELS);
+    }
+    
+    // Update all active voices and generate samples
+    updateAllVoices();
+    
+    // Process resonance model
+    processResonance();
+    
+    // Mix voices to buffer
+    mixVoicesToBuffer(buffer_size);
+    
+    // Apply master effects
+    applyMasterEffects();
+    
+    // Clean up inactive voices
+    cleanupInactiveVoices();
+    
+    return audio_buffer_;
+}
+
+void PianoSynthesizer::setPedalDamping(float damping) {
+    pedal_damping_ = Utils::MathUtils::clamp(damping, 0.0f, 1.0f);
+    
+    // Apply to all active voices
+    for (auto& pair : active_voices_) {
+        pair.second->string_model->setDamping(pedal_damping_);
+    }
+}
+
+void PianoSynthesizer::setStringTension(float tension) {
+    string_tension_ = Utils::MathUtils::clamp(tension, 0.5f, 2.0f);
+    
+    // Apply to all active voices
+    for (auto& pair : active_voices_) {
+        double base_tension = 1000.0 * (1.0 + (pair.first - 60) * 0.01);
+        pair.second->string_model->setTension(base_tension * string_tension_);
+    }
+}
+
+void PianoSynthesizer::setMasterTuning(float tuning_offset) {
+    master_tuning_ = Utils::MathUtils::clamp(tuning_offset, -100.0f, 100.0f); // Cents
+    
+    // Tuning changes require voice reinitialization, so just store for new voices
+}
+
+void PianoSynthesizer::setVelocitySensitivity(float sensitivity) {
+    velocity_sensitivity_ = Utils::MathUtils::clamp(sensitivity, 0.001f, 0.1f);
+}
+
+void PianoSynthesizer::setSoundboardResonance(float resonance) {
+    resonance_model_->setSoundboardResonance(resonance);
+}
+
+void PianoSynthesizer::setRoomAcoustics(float size, float damping) {
+    resonance_model_->setRoomSize(size);
+    resonance_model_->setRoomDamping(damping);
+}
+
+void PianoSynthesizer::setStringCoupling(float coupling_strength) {
+    // String coupling is handled internally by the resonance model
+    // This could be extended to adjust coupling parameters
+}
+
+Voice* PianoSynthesizer::allocateVoice(int note_number) {
+    // Check if note is already playing
+    auto existing = active_voices_.find(note_number);
+    if (existing != active_voices_.end()) {
+        // Reuse existing voice
+        return existing->second;
+    }
+    
+    // Find available voice from pool
+    for (auto& voice : voice_pool_) {
+        if (!voice->active) {
+            voice->note_number = note_number;
+            voice->frequency = Utils::MathUtils::midiToFrequency(note_number);
+            
+            // Apply master tuning
+            if (master_tuning_ != 0.0f) {
+                voice->frequency *= pow(2.0, master_tuning_ / 1200.0); // Convert cents to frequency ratio
+            }
+            
+            active_voices_[note_number] = voice.get();
+            return voice.get();
+        }
+    }
+    
+    // No available voices, steal oldest
+    Voice* oldest = findOldestVoice();
+    if (oldest) {
+        // Remove from active voices
+        for (auto it = active_voices_.begin(); it != active_voices_.end(); ++it) {
+            if (it->second == oldest) {
+                active_voices_.erase(it);
+                break;
+            }
+        }
+        
+        // Reassign to new note
+        oldest->note_number = note_number;
+        oldest->frequency = Utils::MathUtils::midiToFrequency(note_number);
+        oldest->active = false; // Will be activated by noteOn call
+        
+        active_voices_[note_number] = oldest;
+        return oldest;
+    }
+    
+    return nullptr;
+}
+
+void PianoSynthesizer::releaseVoice(int note_number) {
+    auto it = active_voices_.find(note_number);
+    if (it != active_voices_.end()) {
+        active_voices_.erase(it);
+    }
+}
+
+void PianoSynthesizer::updateAllVoices() {
+    std::fill(string_outputs_.begin(), string_outputs_.end(), 0.0);
+    
+    for (auto& pair : active_voices_) {
+        Voice* voice = pair.second;
+        if (voice->active) {
+            double sample = voice->generateSample();
+            
+            // Map MIDI note to string index
+            int string_index = voice->note_number - Constants::LOWEST_KEY;
+            if (string_index >= 0 && string_index < Constants::NUM_KEYS) {
+                string_outputs_[string_index] = sample;
+                
+                // Update resonance model
+                resonance_model_->updateStringCoupling(string_index, sample, voice->frequency);
+            }
+        }
+    }
+}
+
+void PianoSynthesizer::processResonance() {
+    // Add sympathetic resonance to string outputs
+    for (int i = 0; i < Constants::NUM_KEYS; ++i) {
+        double sympathetic = resonance_model_->getSympatheticResonance(i);
+        string_outputs_[i] += sympathetic;
+    }
+}
+
+void PianoSynthesizer::mixVoicesToBuffer(int buffer_size) {
+    // Process soundboard resonance
+    double soundboard_output = resonance_model_->processSoundboard(string_outputs_);
+    
+    // Fill buffer with processed audio
+    for (int frame = 0; frame < buffer_size; ++frame) {
+        // Apply room acoustics
+        double processed_sample = resonance_model_->processRoomAcoustics(soundboard_output);
+        
+        // Convert to stereo
+        float left_sample = static_cast<float>(processed_sample);
+        float right_sample = static_cast<float>(processed_sample);
+        
+        // Simple stereo imaging based on note position
+        for (auto& pair : active_voices_) {
+            Voice* voice = pair.second;
+            if (voice->active) {
+                float pan = (voice->note_number - 60.0f) / 48.0f; // -1.0 to 1.0
+                pan = Utils::MathUtils::clamp(pan, -1.0f, 1.0f);
+                
+                float left_gain = (1.0f - pan) * 0.5f + 0.5f;
+                float right_gain = (1.0f + pan) * 0.5f + 0.5f;
+                
+                left_sample *= left_gain;
+                right_sample *= right_gain;
+            }
+        }
+        
+        audio_buffer_[frame * Constants::CHANNELS] = left_sample;
+        audio_buffer_[frame * Constants::CHANNELS + 1] = right_sample;
+    }
+}
+
+void PianoSynthesizer::applyMasterEffects() {
+    // Apply soft clipping and normalization
+    applySoftClipping();
+    normalizeAudio();
+}
+
+Voice* PianoSynthesizer::findOldestVoice() {
+    Voice* oldest = nullptr;
+    double max_age = 0.0;
+    
+    for (auto& voice : voice_pool_) {
+        if (voice->active && voice->age > max_age) {
+            max_age = voice->age;
+            oldest = voice.get();
+        }
+    }
+    
+    return oldest;
+}
+
+void PianoSynthesizer::cleanupInactiveVoices() {
+    auto it = active_voices_.begin();
+    while (it != active_voices_.end()) {
+        if (it->second->shouldRelease()) {
+            it->second->active = false;
+            it = active_voices_.erase(it);
+        } else {
+            ++it;
+        }
+    }
+}
+
+bool PianoSynthesizer::isVoiceActive(const Voice* voice) const {
+    return voice && voice->active && voice->amplitude > 0.001;
+}
+
+void PianoSynthesizer::clearAudioBuffer() {
+    std::fill(audio_buffer_.begin(), audio_buffer_.end(), 0.0f);
+}
+
+void PianoSynthesizer::normalizeAudio() {
+    // Find peak level
+    float peak = 0.0f;
+    for (float sample : audio_buffer_) {
+        peak = std::max(peak, std::abs(sample));
+    }
+    
+    // Apply gentle compression if needed
+    if (peak > 0.9f) {
+        float gain = 0.9f / peak;
+        for (float& sample : audio_buffer_) {
+            sample *= gain;
+        }
+    }
+}
+
+void PianoSynthesizer::applySoftClipping() {
+    for (float& sample : audio_buffer_) {
+        sample = Utils::DSPUtils::softClip(sample, 0.8f);
+    }
+}
+
+} // namespace Synthesis
+} // namespace PianoSynth

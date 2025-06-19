@@ -1,0 +1,119 @@
+cmake_minimum_required(VERSION 3.16)
+
+# Find Google Test
+find_package(GTest REQUIRED)
+include(GoogleTest)
+
+# Include shared interfaces
+include_directories(${CMAKE_SOURCE_DIR}/shared/interfaces)
+
+# Test executable for modular architecture
+add_executable(piano_synth_modular_tests
+    # Modular integration tests
+    test_modular_abstraction.cpp
+    test_modular_instrument.cpp
+    test_modular_integration.cpp
+    
+    # Unit tests for shared components
+    test_common_types.cpp
+    test_math_utils.cpp
+    
+    # Test main
+    test_main.cpp
+    
+    # Shared utilities for tests
+    ../shared/utils/math_utils.cpp
+    ../shared/utils/logger.cpp
+)
+
+target_include_directories(piano_synth_modular_tests PRIVATE
+    ${CMAKE_SOURCE_DIR}/shared/interfaces
+    ${CMAKE_SOURCE_DIR}/shared/utils
+    ${GTEST_INCLUDE_DIRS}
+)
+
+target_link_libraries(piano_synth_modular_tests
+    ${GTEST_LIBRARIES}
+    ${CMAKE_DL_LIBS}  # For dlopen/dlsym
+    pthread
+    m
+)
+
+# Compiler definitions for tests
+target_compile_definitions(piano_synth_modular_tests PRIVATE
+    TESTING_MODE=1
+    DLL_DIR="${DLL_OUTPUT_DIR}"
+)
+
+# Discover tests
+gtest_discover_tests(piano_synth_modular_tests)
+
+# Legacy tests (if we want to keep them)
+option(BUILD_LEGACY_TESTS "Build legacy test suite" OFF)
+
+if(BUILD_LEGACY_TESTS)
+    add_executable(piano_synth_legacy_tests
+        # Legacy unit tests
+        test_math_utils_legacy.cpp
+        test_string_model_legacy.cpp
+        test_wave_equation_legacy.cpp
+        test_note_events_legacy.cpp
+        
+        # Test main
+        test_main.cpp
+        
+        # Legacy source files
+        ../core/physics/string_model.cpp
+        ../core/physics/wave_equation_solver.cpp
+        ../core/utils/math_utils.cpp
+        ../core/utils/logger.cpp
+    )
+
+    target_include_directories(piano_synth_legacy_tests PRIVATE
+        ${CMAKE_SOURCE_DIR}/core
+        ${GTEST_INCLUDE_DIRS}
+    )
+
+    target_link_libraries(piano_synth_legacy_tests
+        ${GTEST_LIBRARIES}
+        pthread
+        m
+    )
+
+    target_compile_definitions(piano_synth_legacy_tests PRIVATE
+        TESTING_MODE=1
+    )
+
+    gtest_discover_tests(piano_synth_legacy_tests)
+endif()
+
+# Test data and configuration
+configure_file(
+    ${CMAKE_SOURCE_DIR}/config/core.json
+    ${CMAKE_CURRENT_BINARY_DIR}/test_config/core.json
+    COPYONLY
+)
+
+configure_file(
+    ${CMAKE_SOURCE_DIR}/config/input.json
+    ${CMAKE_CURRENT_BINARY_DIR}/test_config/input.json
+    COPYONLY
+)
+
+configure_file(
+    ${CMAKE_SOURCE_DIR}/config/abstraction.json
+    ${CMAKE_CURRENT_BINARY_DIR}/test_config/abstraction.json
+    COPYONLY
+)
+
+configure_file(
+    ${CMAKE_SOURCE_DIR}/config/output.json
+    ${CMAKE_CURRENT_BINARY_DIR}/test_config/output.json
+    COPYONLY
+)
+
+configure_file(
+    ${CMAKE_SOURCE_DIR}/config/instruments/piano.json
+    ${CMAKE_CURRENT_BINARY_DIR}/test_config/instruments/piano.json
+    COPYONLY
+)

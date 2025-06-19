@@ -1,0 +1,29 @@
+cmake_minimum_required(VERSION 3.12)
+
+# Find GTest
+find_package(GTest REQUIRED)
+
+# Include directories for tests
+include_directories(
+    ${CMAKE_SOURCE_DIR}
+    ${CMAKE_SOURCE_DIR}/shared/interfaces
+    ${CMAKE_SOURCE_DIR}/shared/utils
+)
+
+# Modular tests executable
+add_executable(modular_tests
+    test_modular_abstraction.cpp
+    test_modular_instrument.cpp  
+    test_modular_integration.cpp
+    test_common_types.cpp
+)
+
+target_link_libraries(modular_tests
+    piano_shared_minimal
+    GTest::gtest
+    GTest::gtest_main
+    ${CMAKE_DL_LIBS}
+)
+
+# Add test runner
+add_test(NAME ModularTests COMMAND modular_tests)
