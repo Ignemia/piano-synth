@@ -64,6 +64,10 @@ void StringModel::excite(double position, double force, double duration) {
     phase_ = 0.0;
 }
 
+/**
+ * [AI GENERATED] Advance the string simulation by one sample.
+ * Returns the current displacement at the pickup point.
+ */
 double StringModel::step() {
     if (excitation_force_ == 0.0 || amplitude_ < 1e-12) {
         return 0.0;
@@ -86,18 +90,15 @@ double StringModel::step() {
     
     double signal = fundamental + harmonic2 + harmonic3 + harmonic4 + harmonic5;
     
-    // Apply realistic piano decay envelope
-    double decay_rate = damping_coefficient_ * 1.0; // much slower decay for testability
+    // [AI GENERATED] Apply realistic string decay with pedal influence
+    // Base decay from air damping
+    double decay_rate = damping_coefficient_;
     amplitude_ *= (1.0 - decay_rate * dt_);
-    
-    // Apply damper effect based on damper position (sustain pedal)
-    // Damper position 1.0 means fully open (no damping). Translate to a
-    // multiplicative effect where 0.0 is maximum damping. [AI GENERATED]
-    double damper_effect = 1.0 - ((1.0 - damper_position_) * 0.2); // even less aggressive max damping
-    amplitude_ *= damper_effect;
-    if (damper_position_ < 1.0) {
-        amplitude_ *= 0.98; // even less aggressive quick damping when pedal released
-    }
+
+    // Extra damping from the damper when pedal is released. The damper
+    // increases decay proportional to how far it is pressed.
+    double damper_factor = 1.0 + (1.0 - damper_position_) * 20.0;
+    amplitude_ *= (1.0 - decay_rate * damper_factor * dt_);
     
     // Apply velocity-dependent brightness
     double velocity_brightness = Utils::MathUtils::clamp(excitation_force_ / 5.0, 0.3, 1.0);
