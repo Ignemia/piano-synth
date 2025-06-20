@@ -57,6 +57,18 @@ target_link_libraries(test_config_manager
     Threads::Threads
 )
 
+add_executable(test_cli_arguments
+    test_main.cpp
+    test_cli_arguments.cpp
+)
+
+target_link_libraries(test_cli_arguments
+    piano_utils
+    test_utils
+    ${GTEST_LIBRARIES}
+    Threads::Threads
+)
+
 add_executable(test_note_params_manager
     test_main.cpp
     test_note_params_manager.cpp
@@ -65,6 +77,18 @@ add_executable(test_note_params_manager
 target_link_libraries(test_note_params_manager
     piano_synthesis
     piano_physics
+    piano_utils
+    test_utils
+    ${GTEST_LIBRARIES}
+    Threads::Threads
+)
+
+add_executable(test_note_settings_cli
+    test_main.cpp
+    test_note_settings_cli.cpp
+)
+
+target_link_libraries(test_note_settings_cli
     piano_utils
     test_utils
     ${GTEST_LIBRARIES}
@@ -193,7 +217,9 @@ target_link_libraries(test_integration
 # Register all tests with CTest
 add_test(NAME MathUtils COMMAND test_math_utils)
 add_test(NAME ConfigManager COMMAND test_config_manager)
+add_test(NAME CliArguments COMMAND test_cli_arguments)
 add_test(NAME NoteParamsManager COMMAND test_note_params_manager)
+add_test(NAME NoteSettingsCli COMMAND test_note_settings_cli)
 add_test(NAME StringModel COMMAND test_string_model)
 add_test(NAME HammerModel COMMAND test_hammer_model)
 add_test(NAME WaveEquation COMMAND test_wave_equation)
@@ -207,7 +233,9 @@ add_test(NAME SystemIntegration COMMAND test_integration)
 # Set test properties
 set_tests_properties(MathUtils PROPERTIES TIMEOUT 30)
 set_tests_properties(ConfigManager PROPERTIES TIMEOUT 30)
+set_tests_properties(CliArguments PROPERTIES TIMEOUT 30)
 set_tests_properties(NoteParamsManager PROPERTIES TIMEOUT 30)
+set_tests_properties(NoteSettingsCli PROPERTIES TIMEOUT 30)
 set_tests_properties(StringModel PROPERTIES TIMEOUT 60)
 set_tests_properties(HammerModel PROPERTIES TIMEOUT 60)
 set_tests_properties(WaveEquation PROPERTIES TIMEOUT 60)

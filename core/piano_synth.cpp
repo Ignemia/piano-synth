@@ -60,7 +60,7 @@ bool PianoSynthApp::initialize() {
     return true;
 }
 
-void PianoSynthApp::run() {
+void PianoSynthApp::run(bool auto_record) {
     if (!initialize()) {
         logger_->error("Failed to initialize application");
         return;
@@ -72,6 +72,12 @@ void PianoSynthApp::run() {
     audio_thread_ = std::thread(&PianoSynthApp::audioProcessingLoop, this);
     midi_thread_ = std::thread(&PianoSynthApp::midiProcessingLoop, this);
     
+    if (auto_record && !recording_active_) {
+        auto ts = std::chrono::system_clock::now();
+        auto t = std::chrono::system_clock::to_time_t(ts);
+        startRecording(std::string("recording_") + std::to_string(t) + ".mp3");
+    }
+
     logger_->info("Piano Synthesizer is running. Press 'q' to quit.");
     
     // Main loop - handle user input
