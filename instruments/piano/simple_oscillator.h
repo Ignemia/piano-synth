@@ -1,6 +1,7 @@
 /**
  * @file simple_oscillator.h
- * @brief [AI GENERATED] Interface to create the simple oscillator instrument.
+ * @brief [AI GENERATED] Interface to create the simple oscillator instrument
+ *        with subtle frequency variation.
  */
 
 #pragma once

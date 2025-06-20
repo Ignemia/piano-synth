@@ -7,6 +7,7 @@
 #include <cmath>
 #include <vector>
 #include <algorithm>
+#include <random>
 
 namespace PianoSynth {
 namespace Instruments {
@@ -14,16 +15,23 @@ namespace Instruments {
 /**
  * @brief [AI GENERATED] Simple oscillator voice state.
  */
+/**
+ * @brief [AI GENERATED] Holds per-voice oscillator state including simple
+ *        detuning and LFO modulation.
+ */
 struct Voice {
-    int note = 0;
-    double frequency = 0.0;
-    double phase = 0.0;
-    float amplitude = 0.0f;
-    bool releasing = false;
+    int note = 0;               ///< MIDI note number
+    double base_frequency = 0;  ///< Unmodulated frequency in Hz
+    double detune_factor = 1.0; ///< Per-voice random detune factor
+    double phase = 0.0;         ///< Oscillator phase
+    double lfo_phase = 0.0;     ///< Phase of the frequency-modulation LFO
+    float amplitude = 0.0f;     ///< Current amplitude
+    bool releasing = false;     ///< Release flag
 };
 
 /**
- * @brief [AI GENERATED] Piano instrument that generates sine waves per note.
+ * @brief [AI GENERATED] Piano instrument that generates sine waves per note
+ *        with subtle frequency variation for a more natural sound.
  */
 class SimpleOscillatorInstrument : public Interfaces::IInstrumentSynthesizer {
 public:
@@ -74,8 +82,12 @@ public:
         for (size_t frame = 0; frame < buffer->frame_count; ++frame) {
             float mix = 0.0f;
             for (auto& v : voices_) {
+                double inst_freq =
+                    v.base_frequency * v.detune_factor *
+                    (1.0 + freq_lfo_depth_ * std::sin(v.lfo_phase));
                 mix += std::sin(v.phase) * v.amplitude;
-                v.phase += 2.0 * M_PI * v.frequency / sample_rate_;
+                v.phase += 2.0 * M_PI * inst_freq / sample_rate_;
+                v.lfo_phase += 2.0 * M_PI * freq_lfo_rate_ / sample_rate_;
                 if (v.releasing) {
                     v.amplitude -= release_rate_;
                 }
@@ -115,8 +127,10 @@ private:
         }
         Voice v;
         v.note = note;
-        v.frequency = 440.0 * std::pow(2.0, (note - 69) / 12.0);
+        v.base_frequency = 440.0 * std::pow(2.0, (note - 69) / 12.0);
+        v.detune_factor = 1.0 + detune_dist_(rng_);
         v.phase = 0.0;
+        v.lfo_phase = 0.0;
         v.amplitude = velocity;
         v.releasing = false;
         voices_.push_back(v);
@@ -134,6 +148,10 @@ private:
     std::vector<Voice> voices_;
     size_t polyphony_ = 64;
     const float release_rate_ = 0.001f;
+    double freq_lfo_rate_ = 5.0;     ///< Frequency modulation rate in Hz
+    double freq_lfo_depth_ = 0.002;  ///< ±depth for frequency modulation
+    std::mt19937 rng_{std::random_device{}()};
+    std::uniform_real_distribution<double> detune_dist_{-0.001, 0.001};
 };
 
 } // namespace Instruments
