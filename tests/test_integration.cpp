@@ -135,7 +135,7 @@ TEST_F(IntegrationTest, SystemInitialization) {
 
 // Test logging system
 TEST_F(IntegrationTest, LoggingSystem) {
-    auto logger = std::make_unique<Utils::Logger>(Utils::LogLevel::DEBUG);
+    auto logger = std::make_unique<Utils::Logger>(Utils::LogLevel::kDebug);
     
     // Test different log levels
     logger->debug("Debug message");

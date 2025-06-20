@@ -276,23 +276,23 @@ double PerformanceTimer::elapsed() const {
     return duration.count() / 1000000.0; // Convert to seconds
 }
 
-MockLogger::MockLogger() : log_level_(Utils::LogLevel::DEBUG), log_to_console_(false) {
+MockLogger::MockLogger() : log_level_(Utils::LogLevel::kDebug), log_to_console_(false) {
 }
 
 void MockLogger::debug(const std::string& message) {
-    log(Utils::LogLevel::DEBUG, message);
+    log(Utils::LogLevel::kDebug, message);
 }
 
 void MockLogger::info(const std::string& message) {
-    log(Utils::LogLevel::INFO, message);
+    log(Utils::LogLevel::kInfo, message);
 }
 
 void MockLogger::warning(const std::string& message) {
-    log(Utils::LogLevel::WARNING, message);
+    log(Utils::LogLevel::kWarning, message);
 }
 
 void MockLogger::error(const std::string& message) {
-    log(Utils::LogLevel::ERROR, message);
+    log(Utils::LogLevel::kError, message);
 }
 
 void MockLogger::log(Utils::LogLevel level, const std::string& message) {
@@ -307,10 +307,10 @@ void MockLogger::log(Utils::LogLevel level, const std::string& message) {
         if (log_to_console_) {
             std::string level_str;
             switch (level) {
-                case Utils::LogLevel::DEBUG: level_str = "DEBUG"; break;
-                case Utils::LogLevel::INFO: level_str = "INFO"; break;
-                case Utils::LogLevel::WARNING: level_str = "WARN"; break;
-                case Utils::LogLevel::ERROR: level_str = "ERROR"; break;
+                case Utils::LogLevel::kDebug: level_str = "DEBUG"; break;
+                case Utils::LogLevel::kInfo: level_str = "INFO"; break;
+                case Utils::LogLevel::kWarning: level_str = "WARN"; break;
+                case Utils::LogLevel::kError: level_str = "ERROR"; break;
             }
             std::cout << "[" << level_str << "] " << message << std::endl;
         }

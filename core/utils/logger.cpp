@@ -16,19 +16,19 @@ Logger::~Logger() {
 }
 
 void Logger::debug(const std::string& message) {
-    log(LogLevel::DEBUG, message);
+    log(LogLevel::kDebug, message);
 }
 
 void Logger::info(const std::string& message) {
-    log(LogLevel::INFO, message);
+    log(LogLevel::kInfo, message);
 }
 
 void Logger::warning(const std::string& message) {
-    log(LogLevel::WARNING, message);
+    log(LogLevel::kWarning, message);
 }
 
 void Logger::error(const std::string& message) {
-    log(LogLevel::ERROR, message);
+    log(LogLevel::kError, message);
 }
 
 void Logger::setLogToFile(bool enable, const std::string& filename) {
@@ -61,7 +61,7 @@ void Logger::log(LogLevel level, const std::string& message) {
     std::string formatted_message = "[" + timestamp + "] [" + level_str + "] " + message;
     
     if (log_to_console_) {
-        if (level >= LogLevel::ERROR) {
+        if (level >= LogLevel::kError) {
             std::cerr << formatted_message << std::endl;
         } else {
             std::cout << formatted_message << std::endl;
@@ -76,10 +76,10 @@ void Logger::log(LogLevel level, const std::string& message) {
 
 std::string Logger::levelToString(LogLevel level) {
     switch (level) {
-        case LogLevel::DEBUG:   return "DEBUG";
-        case LogLevel::INFO:    return "INFO";
-        case LogLevel::WARNING: return "WARN";
-        case LogLevel::ERROR:   return "ERROR";
+        case LogLevel::kDebug:   return "DEBUG";
+        case LogLevel::kInfo:    return "INFO";
+        case LogLevel::kWarning: return "WARN";
+        case LogLevel::kError:   return "ERROR";
         default:                return "UNKNOWN";
     }
 }

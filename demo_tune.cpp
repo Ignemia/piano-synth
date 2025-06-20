@@ -67,7 +67,7 @@ public:
         std::cout << "============================================================" << std::endl;
         
         // Create logger
-        logger_ = std::make_unique<Utils::Logger>(Utils::LogLevel::INFO);
+        logger_ = std::make_unique<Utils::Logger>(Utils::LogLevel::kInfo);
         logger_->setLogToConsole(true);
         
         // Create and configure config manager

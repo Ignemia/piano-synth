@@ -15,7 +15,7 @@ int main() {
     std::cout << "=====================================================" << std::endl;
     
     // Create logger
-    auto logger = std::make_unique<Utils::Logger>(Utils::LogLevel::DEBUG);
+    auto logger = std::make_unique<Utils::Logger>(Utils::LogLevel::kDebug);
     logger->setLogToConsole(true);
     
     // Create config manager with minimal settings

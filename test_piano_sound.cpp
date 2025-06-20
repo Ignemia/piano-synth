@@ -107,7 +107,7 @@ int main() {
     std::cout << "Testing improved piano synthesizer for realistic sound..." << std::endl;
     
     // Create logger with debug output
-    auto logger = std::make_unique<Utils::Logger>(Utils::LogLevel::INFO);
+    auto logger = std::make_unique<Utils::Logger>(Utils::LogLevel::kInfo);
     logger->setLogToConsole(true);
     
     // Create optimized configuration

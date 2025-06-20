@@ -9,11 +9,13 @@
 namespace PianoSynth {
 namespace Utils {
 
+// Enumeration representing log levels. Names are prefixed with 'k'
+// to avoid clashes with system macros such as DEBUG. [AI GENERATED]
 enum class LogLevel {
-    DEBUG = 0,
-    INFO = 1,
-    WARNING = 2,
-    ERROR = 3
+    kDebug = 0,
+    kInfo = 1,
+    kWarning = 2,
+    kError = 3
 };
 
 /**
@@ -21,7 +23,7 @@ enum class LogLevel {
  */
 class Logger {
 public:
-    Logger(LogLevel min_level = LogLevel::INFO);
+    Logger(LogLevel min_level = LogLevel::kInfo);
     ~Logger();
 
     // Logging methods

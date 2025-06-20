@@ -4,7 +4,7 @@
 #include <sstream>
 #include <algorithm>
 #include <iostream>
-#include "../../third_party/json.hpp"
+#include <nlohmann/json.hpp>
 
 namespace PianoSynth {
 namespace Utils {
@@ -111,12 +111,24 @@ double ConfigManager::getDouble(const std::string& key, double default_value) {
     return default_value;
 }
 
+/**
+ * Fetch a boolean value from the configuration. String and numeric
+ * representations are accepted. [AI GENERATED]
+ */
 bool ConfigManager::getBool(const std::string& key, bool default_value) {
     const nlohmann::json* j = get_nested_json_const(config_json_, key);
     std::string last = get_last_key(key);
     if (j && j->contains(last)) {
         try {
-            return (*j)[last].get<bool>();
+            if ((*j)[last].is_boolean()) {
+                return (*j)[last].get<bool>();
+            }
+            if ((*j)[last].is_string()) {
+                return stringToBool((*j)[last].get<std::string>());
+            }
+            if ((*j)[last].is_number()) {
+                return (*j)[last].get<int>() != 0;
+            }
         } catch (...) {}
     }
     return default_value;

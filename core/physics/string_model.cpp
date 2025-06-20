@@ -91,7 +91,9 @@ double StringModel::step() {
     amplitude_ *= (1.0 - decay_rate * dt_);
     
     // Apply damper effect based on damper position (sustain pedal)
-    double damper_effect = 1.0 - (damper_position_ * 0.2); // even less aggressive max damping
+    // Damper position 1.0 means fully open (no damping). Translate to a
+    // multiplicative effect where 0.0 is maximum damping. [AI GENERATED]
+    double damper_effect = 1.0 - ((1.0 - damper_position_) * 0.2); // even less aggressive max damping
     amplitude_ *= damper_effect;
     if (damper_position_ < 1.0) {
         amplitude_ *= 0.98; // even less aggressive quick damping when pedal released

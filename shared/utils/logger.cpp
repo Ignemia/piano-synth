@@ -25,29 +25,29 @@ void Logger::log(LogLevel level, const std::string& message) {
     
     std::string level_str;
     switch (level) {
-        case LogLevel::DEBUG: level_str = "DEBUG"; break;
-        case LogLevel::INFO: level_str = "INFO"; break;
-        case LogLevel::WARNING: level_str = "WARNING"; break;
-        case LogLevel::ERROR: level_str = "ERROR"; break;
+        case LogLevel::kDebug: level_str = "DEBUG"; break;
+        case LogLevel::kInfo: level_str = "INFO"; break;
+        case LogLevel::kWarning: level_str = "WARNING"; break;
+        case LogLevel::kError: level_str = "ERROR"; break;
     }
     
     std::cout << "[" << ss.str() << "] [" << level_str << "] " << message << std::endl;
 }
 
 void Logger::debug(const std::string& message) {
-    log(LogLevel::DEBUG, message);
+    log(LogLevel::kDebug, message);
 }
 
 void Logger::info(const std::string& message) {
-    log(LogLevel::INFO, message);
+    log(LogLevel::kInfo, message);
 }
 
 void Logger::warning(const std::string& message) {
-    log(LogLevel::WARNING, message);
+    log(LogLevel::kWarning, message);
 }
 
 void Logger::error(const std::string& message) {
-    log(LogLevel::ERROR, message);
+    log(LogLevel::kError, message);
 }
 
 } // namespace Utils

@@ -132,7 +132,9 @@ check_dependency make || DEPS_OK=false
 check_dependency g++ || DEPS_OK=false
 
 # Check for required libraries
-check_library portaudio19 || DEPS_OK=false
+# Updated to check the generic portaudio library instead of the
+# non-existent portaudio19 variant on modern distributions. [AI GENERATED]
+check_library portaudio || DEPS_OK=false
 check_library mp3lame || DEPS_OK=false
 check_library rtmidi || DEPS_OK=false
 
