@@ -11,7 +11,7 @@ namespace Utils {
  *
  * The WavWriter provides a simple static method to write floating
  * point audio samples to a standard WAV file using either 16-bit
- * PCM or 32-bit IEEE float encoding.
+ * PCM, 32-bit or 64-bit IEEE float encoding.
  */
 class WavWriter {
 public:
@@ -22,7 +22,7 @@ public:
      * @param filename         Destination WAV filename.
      * @param sample_rate      Audio sample rate in Hz.
      * @param channels         Number of audio channels (1 or 2).
-     * @param bits_per_sample  Bit depth of the output file (16 or 32).
+     * @param bits_per_sample  Bit depth of the output file (16, 32 or 64).
      * @return true if the file was written successfully.
      */
     static bool write(const std::vector<float>& audio_data,

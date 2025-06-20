@@ -156,6 +156,7 @@ target_link_libraries(piano_synth
 # Demo tune player executable
 add_executable(demo_tune
     demo_tune.cpp
+    instruments/piano/simple_oscillator.cpp
 )
 
 target_link_libraries(demo_tune
