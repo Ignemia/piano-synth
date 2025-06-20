@@ -1,4 +1,5 @@
 #pragma once
+// [AI GENERATED]
 
 #include <memory>
 #include <thread>
@@ -28,7 +29,7 @@ public:
 
     // Application lifecycle
     bool initialize();
-    void run();
+    void run(bool auto_record = false);
     void shutdown();
 
     // Recording control

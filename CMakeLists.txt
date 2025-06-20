@@ -63,6 +63,7 @@ add_library(piano_utils STATIC
     core/utils/math_utils.cpp
     core/utils/config_manager.cpp
     core/utils/note_params_manager.cpp
+    core/utils/note_settings_cli.cpp
 )
 
 target_link_libraries(piano_utils
@@ -143,6 +144,7 @@ target_link_libraries(piano_synth_lib
 # Main executable
 add_executable(piano_synth
     core/main.cpp
+    app/cli_arguments.cpp
 )
 
 target_link_libraries(piano_synth
@@ -160,15 +162,6 @@ target_link_libraries(demo_tune
     Threads::Threads
 )
 
-# Piano sound quality test executable
-add_executable(test_piano_sound
-    test_piano_sound.cpp
-)
-
-target_link_libraries(test_piano_sound
-    piano_synth_lib
-    Threads::Threads
-)
 
 # Create config directory and default config file
 file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/config)
@@ -179,7 +172,7 @@ configure_file(
 )
 
 # Install targets
-install(TARGETS piano_synth demo_tune test_piano_sound DESTINATION bin)
+install(TARGETS piano_synth demo_tune DESTINATION bin)
 install(FILES ${CMAKE_BINARY_DIR}/config/piano_config.json DESTINATION share/piano-synth/config)
 
 # Testing
