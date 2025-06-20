@@ -337,14 +337,21 @@ TEST_F(IntegrationTest, SynthesisPipelineIntegration) {
 TEST_F(IntegrationTest, ResonanceModelIntegration) {
     auto resonance_model = std::make_unique<Physics::ResonanceModel>();
     resonance_model->initialize(44100.0, 88); // 88 piano keys
-    
-    // Test string coupling
+
+    // Test string coupling with and without sustain pedal
+    resonance_model->setSustainLevel(0.0);
     resonance_model->updateStringCoupling(39, 0.1, 261.626); // Middle C
     double sympathetic = resonance_model->getSympatheticResonance(40); // C#
-    
-    // Nearby strings should have some coupling
-    EXPECT_GE(sympathetic, -1.0);
-    EXPECT_LE(sympathetic, 1.0);
+
+    // Without sustain the resonance should be near zero
+    EXPECT_NEAR(sympathetic, 0.0, 1e-6);
+
+    resonance_model->setSustainLevel(1.0);
+    resonance_model->updateStringCoupling(39, 0.1, 261.626);
+    double sympathetic_on = resonance_model->getSympatheticResonance(40);
+    EXPECT_NE(sympathetic_on, 0.0);
+    EXPECT_GE(sympathetic_on, -1.0);
+    EXPECT_LE(sympathetic_on, 1.0);
     
     // Test soundboard processing
     std::vector<double> string_outputs(88, 0.0);

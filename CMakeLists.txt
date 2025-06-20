@@ -217,6 +217,7 @@ if(BUILD_TESTS)
         tests/test_config_manager.cpp
         tests/test_string_model.cpp
         tests/test_helpers.cpp
+        tests/test_resonance_model.cpp
     )
 
     target_link_libraries(piano_synth_tests
