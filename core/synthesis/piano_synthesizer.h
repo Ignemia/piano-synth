@@ -4,6 +4,7 @@
 #include "../physics/string_model.h"
 #include "../physics/hammer_model.h"
 #include "../physics/resonance_model.h"
+#include "../utils/note_params_manager.h"
 #include "../utils/config_manager.h"
 #include <vector>
 #include <memory>
@@ -50,6 +51,10 @@ struct Voice {
      * @param sample_rate  Audio sample rate used for model initialization.
      */
     void updateNoteNumber(int new_note, double sample_rate);
+    /**
+     * \brief [AI GENERATED] Apply per-note synthesis parameters.
+     */
+    void applyNoteParams(const Utils::NoteParams& params);
     void noteOn(const Abstraction::NoteEvent& event);
     void noteOff(const Abstraction::NoteEvent& event);
     double generateSample();
@@ -86,6 +91,11 @@ public:
     void setSoundboardResonance(float resonance);
     void setRoomAcoustics(float size, float damping);
     void setStringCoupling(float coupling_strength);
+    /**
+     * \brief [AI GENERATED] Provide the note parameter manager used to
+     * configure individual notes.
+     */
+    void setNoteParamsManager(Utils::NoteParamsManager* manager) { note_params_manager_ = manager; }
     
 private:
     // Voice management
@@ -109,6 +119,7 @@ private:
     
     // Configuration
     Utils::ConfigManager* config_manager_;
+    Utils::NoteParamsManager* note_params_manager_;
     
     // Internal methods
     Voice* allocateVoice(int note_number);

@@ -14,7 +14,8 @@ StringModel::StringModel(int note_number)
       excitation_time_(0.0),
       damper_position_(1.0),
       phase_(0.0),
-      amplitude_(0.0) {
+      amplitude_(0.0),
+      num_harmonics_(Constants::MAX_HARMONICS) {
     
     // Set basic physical properties
     diameter_ = 0.0008 + (108 - note_number) * 0.00003;
@@ -228,7 +229,7 @@ void StringModel::updateHarmonics() {
     harmonic_amplitudes_.clear();
     harmonic_phases_.clear();
 
-    const int max_harmonics = Constants::MAX_HARMONICS;
+    const int max_harmonics = num_harmonics_;
     for (int h = 1; h <= max_harmonics; ++h) {
         double freq = fundamental_frequency_ * static_cast<double>(h) *
                       std::sqrt(1.0 + inharmonicity_coefficient_ * h * h);
@@ -283,8 +284,18 @@ void StringModel::setDamping(double damping) {
     damping_coefficient_ = damping; 
 }
 
-void StringModel::setStiffness(double stiffness) { 
-    stiffness_coefficient_ = stiffness; 
+void StringModel::setStiffness(double stiffness) {
+    stiffness_coefficient_ = stiffness;
+}
+
+void StringModel::setNumHarmonics(int num) {
+    num_harmonics_ = std::max(1, num);
+    updateHarmonics();
+}
+
+void StringModel::setInharmonicityCoefficient(double B) {
+    inharmonicity_coefficient_ = B;
+    updateHarmonics();
 }
 
 void StringModel::setCouplingStrength(double strength) {

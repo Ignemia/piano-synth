@@ -57,6 +57,15 @@ void Voice::updateNoteNumber(int new_note, double sample_rate) {
     active = false;
 }
 
+void Voice::applyNoteParams(const Utils::NoteParams& params) {
+    string_model->setNumHarmonics(params.partials);
+    string_model->setInharmonicityCoefficient(params.inharmonicity);
+    string_model->setDamping(1.0 / std::max(0.001, params.decay));
+    double base_tension = string_model->getTension();
+    string_model->setTension(base_tension * params.tension);
+    amplitude = params.volume;
+}
+
 void Voice::noteOn(const Abstraction::NoteEvent& event) {
     active = true;
     note_off_received = false;
@@ -195,7 +204,8 @@ PianoSynthesizer::PianoSynthesizer()
       string_tension_(1.0f),
       master_tuning_(0.0f),
       velocity_sensitivity_(Constants::VELOCITY_SENSITIVITY),
-      config_manager_(nullptr) {
+      config_manager_(nullptr),
+      note_params_manager_(nullptr) {
     
     resonance_model_ = std::make_unique<Physics::ResonanceModel>();
 }
@@ -372,6 +382,9 @@ Voice* PianoSynthesizer::allocateVoice(int note_number) {
     for (auto& voice : voice_pool_) {
         if (!voice->active) {
             voice->updateNoteNumber(note_number, sample_rate_);
+            if (note_params_manager_) {
+                voice->applyNoteParams(note_params_manager_->getParams(note_number));
+            }
 
             // Apply master tuning
             if (master_tuning_ != 0.0f) {
@@ -396,6 +409,9 @@ Voice* PianoSynthesizer::allocateVoice(int note_number) {
         
         // Reassign to new note
         oldest->updateNoteNumber(note_number, sample_rate_);
+        if (note_params_manager_) {
+            oldest->applyNoteParams(note_params_manager_->getParams(note_number));
+        }
 
         // Apply master tuning
         if (master_tuning_ != 0.0f) {
