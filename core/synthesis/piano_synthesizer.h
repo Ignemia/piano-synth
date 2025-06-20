@@ -41,6 +41,15 @@ struct Voice {
     ~Voice();
     
     void initialize(double sample_rate);
+    /**
+     * [AI GENERATED] Reconfigure this voice for a new MIDI note.
+     * This recreates the underlying physical models so that
+     * subsequent playback uses the correct fundamental frequency.
+     *
+     * @param new_note     MIDI note number for this voice.
+     * @param sample_rate  Audio sample rate used for model initialization.
+     */
+    void updateNoteNumber(int new_note, double sample_rate);
     void noteOn(const Abstraction::NoteEvent& event);
     void noteOff(const Abstraction::NoteEvent& event);
     double generateSample();

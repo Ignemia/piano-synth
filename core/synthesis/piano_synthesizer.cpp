@@ -35,6 +35,28 @@ void Voice::initialize(double sample_rate) {
     frequency = Utils::MathUtils::midiToFrequency(note_number);
 }
 
+/**
+ * [AI GENERATED] Update the voice to play a different note.
+ */
+void Voice::updateNoteNumber(int new_note, double sample_rate) {
+    note_number = new_note;
+    frequency = Utils::MathUtils::midiToFrequency(new_note);
+
+    // Recreate models to reflect the new fundamental frequency
+    string_model = std::make_unique<Physics::StringModel>(new_note);
+    hammer_model = std::make_unique<Physics::HammerModel>(new_note);
+    string_model->initialize(sample_rate);
+    hammer_model->initialize(sample_rate);
+
+    // Reset filters and envelope state
+    lowpass_prev_output = 0.0;
+    dc_prev_input = 0.0;
+    dc_prev_output = 0.0;
+    amplitude = 0.0f;
+    age = 0.0;
+    active = false;
+}
+
 void Voice::noteOn(const Abstraction::NoteEvent& event) {
     active = true;
     note_off_received = false;
@@ -349,14 +371,13 @@ Voice* PianoSynthesizer::allocateVoice(int note_number) {
     // Find available voice from pool
     for (auto& voice : voice_pool_) {
         if (!voice->active) {
-            voice->note_number = note_number;
-            voice->frequency = Utils::MathUtils::midiToFrequency(note_number);
-            
+            voice->updateNoteNumber(note_number, sample_rate_);
+
             // Apply master tuning
             if (master_tuning_ != 0.0f) {
-                voice->frequency *= pow(2.0, master_tuning_ / 1200.0); // Convert cents to frequency ratio
+                voice->frequency *= pow(2.0, master_tuning_ / 1200.0);
             }
-            
+
             active_voices_[note_number] = voice.get();
             return voice.get();
         }
@@ -374,8 +395,13 @@ Voice* PianoSynthesizer::allocateVoice(int note_number) {
         }
         
         // Reassign to new note
-        oldest->note_number = note_number;
-        oldest->frequency = Utils::MathUtils::midiToFrequency(note_number);
+        oldest->updateNoteNumber(note_number, sample_rate_);
+
+        // Apply master tuning
+        if (master_tuning_ != 0.0f) {
+            oldest->frequency *= pow(2.0, master_tuning_ / 1200.0);
+        }
+
         oldest->active = false; // Will be activated by noteOn call
         
         active_voices_[note_number] = oldest;
