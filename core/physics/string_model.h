@@ -36,7 +36,17 @@ public:
     void setCouplingStrength(double strength);
     
     // Simulation
-    double step(); // Returns displacement at pickup point
+    /**
+     * [AI GENERATED] Advance the string model by one sample and return
+     * the current displacement at the pickup position.
+     */
+    double step();
+
+    /**
+     * [AI GENERATED] Precompute harmonic frequencies and amplitudes for
+     * additive synthesis. Called on initialization and whenever the
+     * fundamental changes.
+     */
     void updateHarmonics();
     
     // String properties (read-only)
@@ -44,6 +54,31 @@ public:
     double getLength() const { return length_; }
     double getTension() const { return tension_; }
     double getCurrentAmplitude() const;
+
+    /**
+     * [AI GENERATED] Get the inharmonicity coefficient B for this string.
+     */
+    double getInharmonicityCoefficient() const { return inharmonicity_coefficient_; }
+
+    /**
+     * [AI GENERATED] Return the frequency of a specific harmonic including
+     * inharmonicity effects.
+     */
+    double getHarmonicFrequency(size_t index) const {
+        return (index < harmonic_frequencies_.size()) ? harmonic_frequencies_[index] : 0.0;
+    }
+
+    /**
+     * [AI GENERATED] Get the number of harmonics currently modeled.
+     */
+    size_t getNumHarmonics() const { return harmonic_frequencies_.size(); }
+
+    /**
+     * [AI GENERATED] Get the amplitude of the specified harmonic.
+     */
+    double getHarmonicAmplitude(size_t index) const {
+        return (index < harmonic_amplitudes_.size()) ? harmonic_amplitudes_[index] : 0.0;
+    }
     
 private:
     // String physical properties
@@ -91,9 +126,30 @@ private:
     
     // Internal methods
     void calculatePhysicalProperties();
+    /**
+     * [AI GENERATED] Update the internal wave equation using a finite
+     * difference scheme. This advances the displacement arrays by one
+     * time step.
+     */
     void updateWaveEquation();
+
+    /**
+     * [AI GENERATED] Apply the boundary conditions at both ends of the
+     * string. The left end is fixed while the right end is damped by the
+     * current damper position.
+     */
     void applyBoundaryConditions();
+
+    /**
+     * [AI GENERATED] Inject excitation force into the discretized string
+     * during the striking phase of the hammer.
+     */
     void applyExcitation();
+
+    /**
+     * [AI GENERATED] Apply global damping to the string displacement to
+     * emulate energy loss to the surroundings and the damper.
+     */
     void applyDamping();
     void applyStiffness();
     double calculateStiffnessEffect(int point);
@@ -102,6 +158,9 @@ private:
     // Utility functions
     double noteToFrequency(int note_number);
     double calculateStringLength(double frequency, double tension, double linear_density);
+
+    // Inharmonicity coefficient
+    double inharmonicity_coefficient_;
 };
 
 } // namespace Physics
