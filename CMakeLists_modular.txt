@@ -96,11 +96,7 @@ target_link_libraries(piano_abstraction
 
 # ==================== PIANO INSTRUMENT DLL ====================
 add_library(piano_instrument SHARED
-    instruments/piano/piano_synthesizer.cpp
-    instruments/piano/string_model.cpp
-    instruments/piano/hammer_model.cpp
-    instruments/piano/resonance_model.cpp
-    instruments/piano/wave_equation_solver.cpp
+    instruments/piano/simple_oscillator.cpp
 )
 
 target_include_directories(piano_instrument PRIVATE ${SHARED_INCLUDE_DIRS})

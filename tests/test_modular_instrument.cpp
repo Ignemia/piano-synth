@@ -423,3 +423,11 @@ TEST_F(ModularInstrumentTest, ParameterControl) {
     // Just verify the calls don't crash
     SUCCEED() << "Parameter calls completed without crashing";
 }
+
+// Test update_config call for coverage
+TEST_F(ModularInstrumentTest, UpdateConfigCall) {
+    if (!instrument_) GTEST_SKIP();
+
+    const char* cfg = "{}";
+    EXPECT_TRUE(instrument_->update_config(cfg));
+}
