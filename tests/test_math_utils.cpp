@@ -276,3 +276,11 @@ TEST_F(DSPUtilsTest, DelayProcessing) {
     EXPECT_GT(delayed_output, 0.0);
     EXPECT_LE(delayed_output, 1.0);
 }
+
+// [AI GENERATED] Test cents to ratio conversion
+TEST_F(MathUtilsTest, CentsToRatioConversion) {
+    EXPECT_NEAR(MathUtils::centsToRatio(0.0), 1.0, EPSILON);
+    EXPECT_NEAR(MathUtils::centsToRatio(1200.0), 2.0, EPSILON);
+    EXPECT_NEAR(MathUtils::centsToRatio(-1200.0), 0.5, EPSILON);
+    EXPECT_NEAR(MathUtils::centsToRatio(100.0), pow(2.0, 100.0 / 1200.0), EPSILON);
+}

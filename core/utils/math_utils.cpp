@@ -18,6 +18,13 @@ int MathUtils::frequencyToMidi(double frequency) {
     return static_cast<int>(round(69.0 + 12.0 * log2(frequency / 440.0)));
 }
 
+/**
+ * \brief [AI GENERATED] Convert cent offsets to a multiplicative ratio.
+ */
+double MathUtils::centsToRatio(double cents) {
+    return pow(2.0, cents / 1200.0);
+}
+
 double MathUtils::linearInterpolate(double y1, double y2, double x) {
     return y1 + x * (y2 - y1);
 }

@@ -35,6 +35,13 @@ public:
     
     // String coupling control
     void setCouplingStrength(double strength);
+
+    /**
+     * \brief [AI GENERATED] Set the sustain pedal level controlling
+     * sympathetic resonance.
+     * \param level Sustain pedal position in range [0,1].
+     */
+    void setSustainLevel(double level);
     
 private:
     double sample_rate_;
@@ -65,9 +72,16 @@ private:
         double damping;
     };
     std::vector<DelayLine> reverb_delays_;
+
+    // Sustain pedal level [AI GENERATED]
+    double sustain_level_;
     
     // Internal methods
     void calculateCouplingMatrix();
+    /**
+     * \brief [AI GENERATED] Recalculate sympathetic resonance forces
+     * for all strings using the current sustain level.
+     */
     void updateSympatheticResonance();
     double processResonator(SoundboardResonator& resonator, double input);
     double processDelayLine(DelayLine& delay, double input);
@@ -75,6 +89,16 @@ private:
     void initializeReverbDelays();
     
     // Utility functions
+    /**
+     * \brief [AI GENERATED] Compute coupling strength between two strings.
+     *
+     * The algorithm considers harmonic relationships and semitone distance
+     * to provide more realistic sympathetic resonance.
+     *
+     * \param freq1 Frequency of the first string.
+     * \param freq2 Frequency of the second string.
+     * \return Coupling coefficient in range [0, 0.2].
+     */
     double calculateCouplingStrength(double freq1, double freq2);
     double noteToFrequency(int note_number);
 };

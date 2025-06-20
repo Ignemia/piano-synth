@@ -258,6 +258,7 @@ add_test(NAME PianoSynthesizer COMMAND test_piano_synthesizer)
 add_test(NAME SynthesisIntegration COMMAND test_synthesis_integration)
 add_test(NAME SystemIntegration COMMAND test_integration)
 
+
 # Set test properties
 set_tests_properties(MathUtils PROPERTIES TIMEOUT 30)
 set_tests_properties(ConfigManager PROPERTIES TIMEOUT 30)

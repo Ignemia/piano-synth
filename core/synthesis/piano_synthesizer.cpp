@@ -63,6 +63,7 @@ void Voice::applyNoteParams(const Utils::NoteParams& params) {
     string_model->setDamping(1.0 / std::max(0.001, params.decay));
     double base_tension = string_model->getTension();
     string_model->setTension(base_tension * params.tension);
+    string_model->setDetuneCents(params.detune_cents);
     amplitude = params.volume;
 }
 
@@ -281,12 +282,14 @@ void PianoSynthesizer::processNoteEvent(const Abstraction::NoteEvent& event) {
             // Update sustain pedal state for all active voices
             for (auto& pair : active_voices_) {
                 pair.second->sustain_pedal_active = event.sustain_pedal;
-                
+
                 // If sustain pedal released and note off received, apply damper
                 if (!event.sustain_pedal && pair.second->note_off_received) {
                     pair.second->string_model->setDamperPosition(0.0);
                 }
             }
+            // Propagate sustain level to resonance model
+            resonance_model_->setSustainLevel(event.sustain_pedal ? 1.0 : 0.0);
             break;
             
         default:

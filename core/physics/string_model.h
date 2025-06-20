@@ -37,6 +37,15 @@ public:
      * \brief [AI GENERATED] Explicitly set the inharmonicity coefficient B.
      */
     void setInharmonicityCoefficient(double B);
+
+    /**
+     * \brief [AI GENERATED] Set detuning in cents relative to equal tuning.
+     */
+    void setDetuneCents(double cents);
+    /**
+     * \brief [AI GENERATED] Get current detune value in cents.
+     */
+    double getDetuneCents() const { return detune_cents_; }
     
     // Excitation and damping
     void excite(double position, double force, double duration);
@@ -98,6 +107,8 @@ private:
     // String physical properties
     int note_number_;
     double fundamental_frequency_;
+    // [AI GENERATED] Detuning offset applied to the fundamental frequency
+    double detune_cents_;
     double length_;
     double diameter_;
     double cross_sectional_area_;

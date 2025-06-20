@@ -25,6 +25,7 @@ bool NoteParamsManager::loadFromFile(const std::string& path) {
             if (obj.contains("hammer")) p.hammer = obj["hammer"].get<double>();
             if (obj.contains("volume")) p.volume = obj["volume"].get<double>();
             if (obj.contains("tension")) p.tension = obj["tension"].get<double>();
+            if (obj.contains("detune")) p.detune_cents = obj["detune"].get<double>();
             params_[midi] = p;
         }
         return true;

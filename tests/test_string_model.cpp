@@ -186,6 +186,16 @@ TEST_F(StringModelTest, ParameterChanges) {
     // No direct getter for stiffness, but should not crash
 }
 
+// [AI GENERATED] Verify detune cents alters fundamental frequency
+TEST_F(StringModelTest, DetuneCentsAffectsFrequency) {
+    double original = string_model->getFundamentalFrequency();
+    string_model->setDetuneCents(100.0);
+    EXPECT_NEAR(string_model->getFundamentalFrequency(),
+                original * MathUtils::centsToRatio(100.0), 1e-6);
+    string_model->setDetuneCents(0.0);
+    EXPECT_NEAR(string_model->getFundamentalFrequency(), original, 1e-6);
+}
+
 // Test reset functionality
 TEST_F(StringModelTest, ResetFunctionality) {
     // Excite string

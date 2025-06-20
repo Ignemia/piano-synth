@@ -20,6 +20,11 @@ public:
     // MIDI to frequency conversion
     static double midiToFrequency(int midi_note);
     static int frequencyToMidi(double frequency);
+
+    /**
+     * \brief [AI GENERATED] Convert tuning offset in cents to a frequency ratio.
+     */
+    static double centsToRatio(double cents);
     
     // Interpolation
     static double linearInterpolate(double y1, double y2, double x);

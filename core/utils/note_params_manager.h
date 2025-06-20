@@ -18,6 +18,10 @@ struct NoteParams {
     double hammer{0.0};
     double volume{0.0};
     double tension{1.0};
+    /**
+     * \brief [AI GENERATED] Detuning offset in cents for this note.
+     */
+    double detune_cents{0.0};
 };
 
 /**

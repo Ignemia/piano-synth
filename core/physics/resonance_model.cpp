@@ -9,7 +9,8 @@ namespace Physics {
 
 ResonanceModel::ResonanceModel()
     : sample_rate_(44100.0),
-      num_strings_(0) {
+      num_strings_(0),
+      sustain_level_(0.0) {
 }
 
 ResonanceModel::~ResonanceModel() = default;
@@ -43,6 +44,7 @@ void ResonanceModel::initialize(double sample_rate, int num_strings) {
 void ResonanceModel::reset() {
     std::fill(string_displacements_.begin(), string_displacements_.end(), 0.0);
     std::fill(sympathetic_forces_.begin(), sympathetic_forces_.end(), 0.0);
+    sustain_level_ = 0.0;
     
     // Reset soundboard resonators
     for (auto& resonator : soundboard_resonators_) {
@@ -176,7 +178,7 @@ void ResonanceModel::updateSympatheticResonance() {
         }
         
         // Apply overall sympathetic resonance strength
-        sympathetic_forces_[i] *= Constants::SYMPATHETIC_RESONANCE;
+        sympathetic_forces_[i] *= Constants::SYMPATHETIC_RESONANCE * sustain_level_;
     }
 }
 
@@ -276,6 +278,10 @@ void ResonanceModel::initializeReverbDelays() {
     }
 }
 
+/**
+ * \brief [AI GENERATED] Calculate coupling strength between two string
+ * frequencies.
+ */
 double ResonanceModel::calculateCouplingStrength(double freq1, double freq2) {
     if (freq1 <= 0.0 || freq2 <= 0.0) {
         return 0.0;
@@ -302,10 +308,18 @@ double ResonanceModel::calculateCouplingStrength(double freq1, double freq2) {
         }
     }
     
-    // Additional coupling for nearby frequencies
+    // Additional coupling for nearby notes using semitone distance
+    int midi1 = Utils::MathUtils::frequencyToMidi(freq1);
+    int midi2 = Utils::MathUtils::frequencyToMidi(freq2);
+    int semitone_diff = std::abs(midi1 - midi2);
+
+    double neighbor_factor = std::exp(-static_cast<double>(semitone_diff) / 12.0);
+    coupling += 0.05 * neighbor_factor;
+
+    // Extra weight when the frequencies are within 50 Hz
     double freq_diff = fabs(freq1 - freq2);
-    if (freq_diff < 50.0) { // Within 50 Hz
-        coupling += 0.02 * exp(-freq_diff / 20.0);
+    if (freq_diff < 50.0) {
+        coupling += 0.02 * std::exp(-freq_diff / 20.0);
     }
     
     return Utils::MathUtils::clamp(coupling, 0.0, 0.2);
@@ -324,6 +338,13 @@ void ResonanceModel::setCouplingStrength(double strength) {
             }
         }
     }
+}
+
+/**
+ * \brief [AI GENERATED] Set sustain pedal level affecting sympathetic resonance.
+ */
+void ResonanceModel::setSustainLevel(double level) {
+    sustain_level_ = Utils::MathUtils::clamp(level, 0.0, 1.0);
 }
 
 double ResonanceModel::noteToFrequency(int note_number) {

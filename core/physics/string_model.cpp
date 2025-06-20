@@ -7,9 +7,10 @@
 namespace PianoSynth {
 namespace Physics {
 
-StringModel::StringModel(int note_number) 
+StringModel::StringModel(int note_number)
     : note_number_(note_number),
       fundamental_frequency_(Utils::MathUtils::midiToFrequency(note_number)),
+      detune_cents_(0.0),
       excitation_force_(0.0),
       excitation_time_(0.0),
       damper_position_(1.0),
@@ -252,6 +253,7 @@ void StringModel::setTension(double tension) {
     tension_ = tension;
     calculatePhysicalProperties();
     fundamental_frequency_ = wave_speed_ / (2.0 * length_);
+    fundamental_frequency_ *= Utils::MathUtils::centsToRatio(detune_cents_);
     updateHarmonics();
 }
 
@@ -263,6 +265,7 @@ void StringModel::setLength(double length) {
     length_ = length;
     calculatePhysicalProperties();
     fundamental_frequency_ = wave_speed_ / (2.0 * length_);
+    fundamental_frequency_ *= Utils::MathUtils::centsToRatio(detune_cents_);
     updateHarmonics();
 }
 
@@ -277,6 +280,7 @@ void StringModel::setDensity(double density) {
     linear_density_ = density * cross_sectional_area_;
     wave_speed_ = Utils::MathUtils::calculateStringWaveSpeed(tension_, linear_density_);
     fundamental_frequency_ = wave_speed_ / (2.0 * length_);
+    fundamental_frequency_ *= Utils::MathUtils::centsToRatio(detune_cents_);
     updateHarmonics();
 }
 
@@ -295,6 +299,17 @@ void StringModel::setNumHarmonics(int num) {
 
 void StringModel::setInharmonicityCoefficient(double B) {
     inharmonicity_coefficient_ = B;
+    updateHarmonics();
+}
+
+/**
+ * \brief [AI GENERATED] Set detuning in cents and recalc frequencies.
+ */
+void StringModel::setDetuneCents(double cents) {
+    detune_cents_ = cents;
+    fundamental_frequency_ = Utils::MathUtils::midiToFrequency(note_number_) *
+                             Utils::MathUtils::centsToRatio(detune_cents_);
+    calculatePhysicalProperties();
     updateHarmonics();
 }
 
