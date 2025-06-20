@@ -1,8 +1,7 @@
 #pragma once
 
 #include "../abstraction/note_event.h"
-#include "../physics/string_model.h"
-#include "../physics/hammer_model.h"
+#include "simple_oscillator.h"
 #include "../physics/resonance_model.h"
 #include "../utils/note_params_manager.h"
 #include "../utils/config_manager.h"
@@ -14,15 +13,26 @@ namespace PianoSynth {
 namespace Synthesis {
 
 /**
- * Voice represents a single note being played, containing
- * all the physical models for that note
+ * @brief [AI GENERATED] Voice representing a single active note.
+ *
+ * The simplified voice stores only a basic sine wave oscillator and
+ * envelope state, omitting the complex physical models used by the
+ * full synthesizer.
  */
 struct Voice {
     int note_number;
     bool active;
     
-    std::unique_ptr<Physics::StringModel> string_model;
-    std::unique_ptr<Physics::HammerModel> hammer_model;
+
+    /**
+     * [AI GENERATED] Simple sine oscillator used instead of full
+     * string and hammer physics.
+     */
+    SimpleOscillator oscillator;
+    /**
+     * @brief Audio sample rate used for oscillator phase increments.
+     */
+    double sample_rate;
     
     // Voice state
     float amplitude;
@@ -115,7 +125,6 @@ private:
     
     // Processing state
     std::vector<float> audio_buffer_;
-    std::vector<double> string_outputs_;
     
     // Configuration
     Utils::ConfigManager* config_manager_;

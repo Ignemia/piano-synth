@@ -64,6 +64,7 @@ add_library(piano_utils STATIC
     core/utils/config_manager.cpp
     core/utils/note_params_manager.cpp
     core/utils/note_settings_cli.cpp
+    core/utils/wav_writer.cpp
 )
 
 target_link_libraries(piano_utils
@@ -108,6 +109,7 @@ target_link_libraries(piano_abstraction
 # Synthesis engine library
 add_library(piano_synthesis STATIC
     core/synthesis/piano_synthesizer.cpp
+    core/synthesis/simple_oscillator.cpp
 )
 
 target_link_libraries(piano_synthesis

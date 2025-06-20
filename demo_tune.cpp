@@ -1,5 +1,6 @@
 #include "core/utils/config_manager.h"
 #include "core/utils/logger.h"
+#include "core/utils/wav_writer.h"
 #include "core/abstraction/input_abstractor.h"
 #include "core/synthesis/piano_synthesizer.h"
 #include <iostream>
@@ -159,8 +160,10 @@ public:
             complete_audio.insert(complete_audio.end(), audio_buffer.begin(), audio_buffer.end());
         }
         
-        // Save audio to file
-        saveAudioToWav(complete_audio, "mary_had_a_little_lamb.wav");
+        // Apply simple smoothing and save audio to 32-bit WAV
+        auto smoothed = smoothAudio(complete_audio, 0.1f);
+        Utils::WavWriter::write(smoothed, "mary_had_a_little_lamb.wav",
+                                static_cast<int>(sample_rate_), 2, 32);
         
         std::cout << "✅ Playback complete!" << std::endl;
         std::cout << "📁 Audio saved to: mary_had_a_little_lamb.wav" << std::endl;
@@ -237,56 +240,21 @@ private:
         return std::string(note_names[note]) + std::to_string(octave);
     }
     
-    void saveAudioToWav(const std::vector<float>& audio_data, const std::string& filename) {
-        // Simple WAV file writer
-        std::ofstream file(filename, std::ios::binary);
-        if (!file.is_open()) {
-            std::cerr << "❌ Failed to open " << filename << " for writing" << std::endl;
-            return;
+
+    /**
+     * @brief [AI GENERATED] Apply a simple smoothing filter to audio data.
+     *
+     * Implements a one-pole low-pass filter controlled by @p alpha to
+     * reduce harsh edges in the generated waveform.
+     */
+    std::vector<float> smoothAudio(const std::vector<float>& input, float alpha) {
+        std::vector<float> output(input.size());
+        if (input.empty()) return output;
+        output[0] = input[0];
+        for (size_t i = 1; i < input.size(); ++i) {
+            output[i] = alpha * input[i] + (1.0f - alpha) * output[i - 1];
         }
-        
-        // WAV header
-        int channels = 2;
-        int sample_rate = static_cast<int>(sample_rate_);
-        int bytes_per_sample = 2; // 16-bit
-        int frame_count = audio_data.size() / channels;
-        int data_size = frame_count * channels * bytes_per_sample;
-        int file_size = 36 + data_size;
-        
-        // RIFF header
-        file.write("RIFF", 4);
-        file.write(reinterpret_cast<const char*>(&file_size), 4);
-        file.write("WAVE", 4);
-        
-        // Format chunk
-        file.write("fmt ", 4);
-        int fmt_chunk_size = 16;
-        short audio_format = 1; // PCM
-        short num_channels = channels;
-        int byte_rate = sample_rate * channels * bytes_per_sample;
-        short block_align = channels * bytes_per_sample;
-        short bits_per_sample = bytes_per_sample * 8;
-        
-        file.write(reinterpret_cast<const char*>(&fmt_chunk_size), 4);
-        file.write(reinterpret_cast<const char*>(&audio_format), 2);
-        file.write(reinterpret_cast<const char*>(&num_channels), 2);
-        file.write(reinterpret_cast<const char*>(&sample_rate), 4);
-        file.write(reinterpret_cast<const char*>(&byte_rate), 4);
-        file.write(reinterpret_cast<const char*>(&block_align), 2);
-        file.write(reinterpret_cast<const char*>(&bits_per_sample), 2);
-        
-        // Data chunk
-        file.write("data", 4);
-        file.write(reinterpret_cast<const char*>(&data_size), 4);
-        
-        // Convert float samples to 16-bit PCM
-        for (float sample : audio_data) {
-            short pcm_sample = static_cast<short>(std::max(-1.0f, std::min(sample, 1.0f)) * 32767.0f);
-            file.write(reinterpret_cast<const char*>(&pcm_sample), 2);
-        }
-        
-        file.close();
-        std::cout << "💾 WAV file saved: " << filename << std::endl;
+        return output;
     }
     
     void printAudioStats(const std::vector<float>& audio_data) {

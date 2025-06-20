@@ -18,20 +18,19 @@ Voice::Voice(int note_num)
       sustain_pedal_active(false),
       note_off_received(false),
       note_off_time(0.0),
-      release_envelope_rate(0.005f),
-      lowpass_prev_output(0.0),
-      dc_prev_input(0.0),
-      dc_prev_output(0.0) {
-    
-    string_model = std::make_unique<Physics::StringModel>(note_number);
-    hammer_model = std::make_unique<Physics::HammerModel>(note_number);
-}
+    release_envelope_rate(0.005f),
+    lowpass_prev_output(0.0),
+    dc_prev_input(0.0),
+    dc_prev_output(0.0),
+    oscillator(Constants::SAMPLE_RATE),
+    sample_rate(Constants::SAMPLE_RATE) {}
 
 Voice::~Voice() = default;
 
-void Voice::initialize(double sample_rate) {
-    string_model->initialize(sample_rate);
-    hammer_model->initialize(sample_rate);
+void Voice::initialize(double sample_rate_in) {
+    sample_rate = sample_rate_in;
+    oscillator = SimpleOscillator(sample_rate);
+    oscillator.setFrequency(Utils::MathUtils::midiToFrequency(note_number));
     frequency = Utils::MathUtils::midiToFrequency(note_number);
 }
 
@@ -42,11 +41,7 @@ void Voice::updateNoteNumber(int new_note, double sample_rate) {
     note_number = new_note;
     frequency = Utils::MathUtils::midiToFrequency(new_note);
 
-    // Recreate models to reflect the new fundamental frequency
-    string_model = std::make_unique<Physics::StringModel>(new_note);
-    hammer_model = std::make_unique<Physics::HammerModel>(new_note);
-    string_model->initialize(sample_rate);
-    hammer_model->initialize(sample_rate);
+    oscillator.setFrequency(frequency);
 
     // Reset filters and envelope state
     lowpass_prev_output = 0.0;
@@ -58,11 +53,6 @@ void Voice::updateNoteNumber(int new_note, double sample_rate) {
 }
 
 void Voice::applyNoteParams(const Utils::NoteParams& params) {
-    string_model->setNumHarmonics(params.partials);
-    string_model->setInharmonicityCoefficient(params.inharmonicity);
-    string_model->setDamping(1.0 / std::max(0.001, params.decay));
-    double base_tension = string_model->getTension();
-    string_model->setTension(base_tension * params.tension);
     amplitude = params.volume;
 }
 
@@ -73,23 +63,7 @@ void Voice::noteOn(const Abstraction::NoteEvent& event) {
     age = 0.0;
     sustain_pedal_active = event.sustain_pedal;
     
-    // Reset models
-    string_model->reset();
-    hammer_model->reset();
-    
-    // Configure string based on note event
-    string_model->setDamperPosition(event.damper_position);
-    
-    // More realistic strike parameters based on velocity
-    double strike_position = 0.125 + (event.velocity - 0.5) * 0.05; // Slight position variation
-    strike_position = std::clamp(strike_position, 0.1, 0.2);
-    
-    double strike_force = event.string_excitation * (0.5 + event.velocity * 0.5);
-    double strike_duration = 0.0008 + event.velocity * 0.0004; // Velocity affects contact time
-    
-    // Strike the string with hammer
-    hammer_model->strike(event.hammer_velocity);
-    string_model->excite(strike_position, strike_force, strike_duration);
+    oscillator.reset();
     
     Utils::Logger logger;
     logger.debug("Voice " + std::to_string(note_number) + " note on: velocity=" + 
@@ -108,9 +82,7 @@ void Voice::noteOff(const Abstraction::NoteEvent& event) {
     sustain_pedal_active = event.sustain_pedal;
     
     // If sustain pedal is not active, start release immediately
-    if (!sustain_pedal_active) {
-        string_model->setDamperPosition(0.0); // Apply damper
-    }
+    (void)release_velocity; // Unused with simplified model
     
     Utils::Logger logger;
     logger.debug("Voice " + std::to_string(note_number) + " note off");
@@ -121,18 +93,14 @@ double Voice::generateSample() {
         return 0.0;
     }
     
-    // Get hammer force
-    double string_displacement = string_model->step();
-    double hammer_force = hammer_model->step(string_displacement);
-    
+    // Generate basic sine sample
+    double raw = oscillator.nextSample();
+
     // Update envelope
-    updateEnvelope(1.0 / Constants::SAMPLE_RATE);
-    
-    // Apply hammer force to modulate the string displacement
-    double modulated_displacement = string_displacement * (1.0 + hammer_force * 0.5);
-    
-    // Apply amplitude envelope with proper scaling
-    double output = modulated_displacement * amplitude * 2.0; // Increased output level
+    updateEnvelope(1.0 / sample_rate);
+
+    // Apply amplitude
+    double output = raw * amplitude;
     
     // Apply gentle low-pass filtering to reduce harsh frequencies
     double alpha = 0.85; // Simple one-pole filter
@@ -240,7 +208,6 @@ bool PianoSynthesizer::initialize(Utils::ConfigManager* config_manager) {
     
     // Initialize audio buffer
     audio_buffer_.resize(Constants::BUFFER_SIZE * Constants::CHANNELS);
-    string_outputs_.resize(Constants::NUM_KEYS, 0.0);
     
     logger.info("Piano Synthesizer initialized with " + std::to_string(max_voices_) + " voices");
     return true;
@@ -283,9 +250,7 @@ void PianoSynthesizer::processNoteEvent(const Abstraction::NoteEvent& event) {
                 pair.second->sustain_pedal_active = event.sustain_pedal;
                 
                 // If sustain pedal released and note off received, apply damper
-                if (!event.sustain_pedal && pair.second->note_off_received) {
-                    pair.second->string_model->setDamperPosition(0.0);
-                }
+                (void)event;
             }
             break;
             
@@ -305,8 +270,6 @@ std::vector<float> PianoSynthesizer::generateAudioBuffer(int buffer_size) {
     // Update all active voices and generate samples
     updateAllVoices();
     
-    // Process resonance model
-    processResonance();
     
     // Mix voices to buffer
     mixVoicesToBuffer(buffer_size);
@@ -323,20 +286,13 @@ std::vector<float> PianoSynthesizer::generateAudioBuffer(int buffer_size) {
 void PianoSynthesizer::setPedalDamping(float damping) {
     pedal_damping_ = Utils::MathUtils::clamp(damping, 0.0f, 1.0f);
     
-    // Apply to all active voices
-    for (auto& pair : active_voices_) {
-        pair.second->string_model->setDamping(pedal_damping_);
-    }
+    (void)damping;
 }
 
 void PianoSynthesizer::setStringTension(float tension) {
     string_tension_ = Utils::MathUtils::clamp(tension, 0.5f, 2.0f);
     
-    // Apply to all active voices
-    for (auto& pair : active_voices_) {
-        double base_tension = 1000.0 * (1.0 + (pair.first - 60) * 0.01);
-        pair.second->string_model->setTension(base_tension * string_tension_);
-    }
+    (void)tension;
 }
 
 void PianoSynthesizer::setMasterTuning(float tuning_offset) {
@@ -350,24 +306,16 @@ void PianoSynthesizer::setVelocitySensitivity(float sensitivity) {
 }
 
 void PianoSynthesizer::setSoundboardResonance(float resonance) {
-    resonance_model_->setSoundboardResonance(resonance);
+    (void)resonance;
 }
 
 void PianoSynthesizer::setRoomAcoustics(float size, float damping) {
-    resonance_model_->setRoomSize(size);
-    resonance_model_->setRoomDamping(damping);
+    (void)size;
+    (void)damping;
 }
 
 void PianoSynthesizer::setStringCoupling(float coupling_strength) {
-    // Apply string coupling strength to resonance model
-    resonance_model_->setCouplingStrength(coupling_strength);
-    
-    // Also apply to individual voices for sympathetic resonance
-    for (auto& voice : voice_pool_) {
-        if (voice->active) {
-            voice->string_model->setCouplingStrength(coupling_strength);
-        }
-    }
+    (void)coupling_strength;
 }
 
 Voice* PianoSynthesizer::allocateVoice(int note_number) {
@@ -435,31 +383,11 @@ void PianoSynthesizer::releaseVoice(int note_number) {
 }
 
 void PianoSynthesizer::updateAllVoices() {
-    std::fill(string_outputs_.begin(), string_outputs_.end(), 0.0);
-    
-    for (auto& pair : active_voices_) {
-        Voice* voice = pair.second;
-        if (voice->active) {
-            double sample = voice->generateSample();
-            
-            // Map MIDI note to string index
-            int string_index = voice->note_number - Constants::LOWEST_KEY;
-            if (string_index >= 0 && string_index < Constants::NUM_KEYS) {
-                string_outputs_[string_index] = sample;
-                
-                // Update resonance model
-                resonance_model_->updateStringCoupling(string_index, sample, voice->frequency);
-            }
-        }
-    }
+    // Physics update disabled in simplified model
 }
 
 void PianoSynthesizer::processResonance() {
-    // Add sympathetic resonance to string outputs
-    for (int i = 0; i < Constants::NUM_KEYS; ++i) {
-        double sympathetic = resonance_model_->getSympatheticResonance(i);
-        string_outputs_[i] += sympathetic;
-    }
+    // Resonance disabled in simplified model
 }
 
 void PianoSynthesizer::mixVoicesToBuffer(int buffer_size) {
