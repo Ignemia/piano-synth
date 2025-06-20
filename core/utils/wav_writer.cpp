@@ -11,7 +11,9 @@ bool WavWriter::write(const std::vector<float>& audio_data,
                       int sample_rate,
                       int channels,
                       int bits_per_sample) {
-    bits_per_sample = (bits_per_sample == 32) ? 32 : 16;
+    if (bits_per_sample != 16 && bits_per_sample != 32 && bits_per_sample != 64) {
+        bits_per_sample = 16;
+    }
     int bytes_per_sample = bits_per_sample / 8;
     int frame_count = audio_data.size() / channels;
     int data_size = frame_count * channels * bytes_per_sample;
@@ -30,7 +32,7 @@ bool WavWriter::write(const std::vector<float>& audio_data,
     // Format chunk
     file.write("fmt ", 4);
     int fmt_chunk_size = 16;
-    uint16_t audio_format = (bits_per_sample == 32) ? 3 : 1; // IEEE float or PCM
+    uint16_t audio_format = (bits_per_sample == 16) ? 1 : 3; // PCM =1, IEEE float=3
     uint16_t num_channels = static_cast<uint16_t>(channels);
     uint32_t byte_rate = sample_rate * channels * bytes_per_sample;
     uint16_t block_align = channels * bytes_per_sample;
@@ -54,10 +56,15 @@ bool WavWriter::write(const std::vector<float>& audio_data,
             int16_t pcm = static_cast<int16_t>(clamped * 32767.0f);
             file.write(reinterpret_cast<const char*>(&pcm), 2);
         }
-    } else { // 32-bit float
+    } else if (bits_per_sample == 32) { // 32-bit float
         for (float sample : audio_data) {
             float clamped = std::clamp(sample, -1.0f, 1.0f);
             file.write(reinterpret_cast<const char*>(&clamped), 4);
+        }
+    } else { // 64-bit float
+        for (float sample : audio_data) {
+            double clamped = std::clamp(static_cast<double>(sample), -1.0, 1.0);
+            file.write(reinterpret_cast<const char*>(&clamped), 8);
         }
     }
 

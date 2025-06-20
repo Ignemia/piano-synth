@@ -240,6 +240,20 @@ target_link_libraries(test_wav_writer
 )
 
 add_test(NAME WavWriter COMMAND test_wav_writer)
+
+add_executable(test_simple_oscillator
+    test_main.cpp
+    test_simple_oscillator.cpp
+    ../instruments/piano/simple_oscillator.cpp
+)
+
+target_link_libraries(test_simple_oscillator
+    test_utils
+    ${GTEST_LIBRARIES}
+    Threads::Threads
+)
+
+add_test(NAME SimpleOscillator COMMAND test_simple_oscillator)
 add_test(NAME PianoSynthesizer COMMAND test_piano_synthesizer)
 add_test(NAME SynthesisIntegration COMMAND test_synthesis_integration)
 add_test(NAME SystemIntegration COMMAND test_integration)
@@ -257,6 +271,7 @@ set_tests_properties(AbstractionLayer PROPERTIES TIMEOUT 30)
 set_tests_properties(MidiDetector PROPERTIES TIMEOUT 30)
 set_tests_properties(NoteEvents PROPERTIES TIMEOUT 30)
 set_tests_properties(WavWriter PROPERTIES TIMEOUT 30)
+set_tests_properties(SimpleOscillator PROPERTIES TIMEOUT 30)
 set_tests_properties(PianoSynthesizer PROPERTIES TIMEOUT 120)
 set_tests_properties(SynthesisIntegration PROPERTIES TIMEOUT 120)
 set_tests_properties(SystemIntegration PROPERTIES TIMEOUT 180)

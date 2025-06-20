@@ -1,14 +1,14 @@
-#include "core/utils/config_manager.h"
 #include "core/utils/logger.h"
 #include "core/utils/wav_writer.h"
-#include "core/abstraction/input_abstractor.h"
-#include "core/synthesis/piano_synthesizer.h"
+#include "shared/interfaces/dll_interfaces.h"
+#include "instruments/piano/simple_oscillator.h"
 #include <iostream>
 #include <vector>
 #include <chrono>
 #include <fstream>
 #include <algorithm>
 #include <cmath>
+#include <memory>
 
 using namespace PianoSynth;
 
@@ -61,7 +61,14 @@ std::vector<Note> mary_had_a_little_lamb = {
 
 class TunePlayer {
 public:
-    TunePlayer() : sample_rate_(44100), buffer_size_(512) {}
+    TunePlayer() : sample_rate_(192000), buffer_size_(512) {}
+
+    ~TunePlayer() {
+        if (instrument_) {
+            destroy_instrument_synthesizer(instrument_);
+            instrument_ = nullptr;
+        }
+    }
     
     bool initialize() {
         std::cout << "🎹 Piano Synthesizer Demo - Playing 'Mary Had a Little Lamb'" << std::endl;
@@ -71,37 +78,33 @@ public:
         logger_ = std::make_unique<Utils::Logger>(Utils::LogLevel::kInfo);
         logger_->setLogToConsole(true);
         
-        // Create and configure config manager
-        config_manager_ = std::make_unique<Utils::ConfigManager>();
-        setupTestConfiguration();
-        
-        // Create input abstractor
-        input_abstractor_ = std::make_unique<Abstraction::InputAbstractor>();
-        input_abstractor_->initialize();
-        
-        // Create piano synthesizer
-        piano_synthesizer_ = std::make_unique<Synthesis::PianoSynthesizer>();
-        if (!piano_synthesizer_->initialize(config_manager_.get())) {
-            std::cerr << "❌ Failed to initialize piano synthesizer" << std::endl;
+        instrument_ = create_instrument_synthesizer();
+        if (!instrument_) {
+            std::cerr << "❌ Failed to create oscillator instrument" << std::endl;
             return false;
         }
-        
-        // Set reasonable synthesis parameters
-        piano_synthesizer_->setMasterTuning(0.0f);
-        piano_synthesizer_->setVelocitySensitivity(0.02f);
-        piano_synthesizer_->setSoundboardResonance(0.7f);
-        piano_synthesizer_->setRoomAcoustics(8.0, 0.3);
-        
-        std::cout << "✅ Piano synthesizer initialized successfully" << std::endl;
+
+        if (!instrument_->initialize("{}", sample_rate_, buffer_size_ * 4)) {
+            std::cerr << "❌ Failed to initialize oscillator" << std::endl;
+            return false;
+        }
+
+        std::cout << "✅ Oscillator instrument initialized successfully" << std::endl;
         return true;
     }
     
     void playTune(const std::vector<Note>& tune) {
         std::cout << "\n🎵 Starting playback..." << std::endl;
         
-        // Prepare audio output file
         std::vector<float> complete_audio;
-        
+
+        Interfaces::AudioBuffer buffer;
+        buffer.frame_count = buffer_size_;
+        buffer.channel_count = 2;
+        buffer.sample_rate = sample_rate_;
+        std::vector<float> temp(buffer.total_samples());
+        buffer.samples = temp.data();
+
         for (size_t i = 0; i < tune.size(); ++i) {
             const Note& note = tune[i];
             
@@ -113,7 +116,7 @@ public:
             
             // Create note on event
             auto note_on_event = createNoteOnEvent(note.midi_note, note.velocity);
-            piano_synthesizer_->processNoteEvent(note_on_event);
+            instrument_->process_events(&note_on_event, 1);
             
             // Generate audio for most of the note duration
             double note_on_time = note.duration * 0.8; // 80% of duration with note on
@@ -122,48 +125,46 @@ public:
             // Generate audio while note is on
             int note_on_samples = static_cast<int>(note_on_time * sample_rate_);
             int buffers_needed = (note_on_samples + buffer_size_ - 1) / buffer_size_;
-            
+
             for (int buf = 0; buf < buffers_needed; ++buf) {
-                auto audio_buffer = piano_synthesizer_->generateAudioBuffer(buffer_size_);
-                complete_audio.insert(complete_audio.end(), audio_buffer.begin(), audio_buffer.end());
+                instrument_->generate_audio(&buffer);
+                complete_audio.insert(complete_audio.end(), temp.begin(), temp.end());
             }
             
             // Create note off event
             auto note_off_event = createNoteOffEvent(note.midi_note);
-            piano_synthesizer_->processNoteEvent(note_off_event);
+            instrument_->process_events(&note_off_event, 1);
             
             // Generate audio for note release
             int note_off_samples = static_cast<int>(note_off_time * sample_rate_);
             int release_buffers = (note_off_samples + buffer_size_ - 1) / buffer_size_;
             
             for (int buf = 0; buf < release_buffers; ++buf) {
-                auto audio_buffer = piano_synthesizer_->generateAudioBuffer(buffer_size_);
-                complete_audio.insert(complete_audio.end(), audio_buffer.begin(), audio_buffer.end());
+                instrument_->generate_audio(&buffer);
+                complete_audio.insert(complete_audio.end(), temp.begin(), temp.end());
             }
             
             // Small pause between notes
             if (i < tune.size() - 1) {
                 int pause_samples = static_cast<int>(0.05 * sample_rate_); // 50ms pause
                 int pause_buffers = (pause_samples + buffer_size_ - 1) / buffer_size_;
-                
+
                 for (int buf = 0; buf < pause_buffers; ++buf) {
-                    auto audio_buffer = piano_synthesizer_->generateAudioBuffer(buffer_size_);
-                    complete_audio.insert(complete_audio.end(), audio_buffer.begin(), audio_buffer.end());
+                    instrument_->generate_audio(&buffer);
+                    complete_audio.insert(complete_audio.end(), temp.begin(), temp.end());
                 }
             }
         }
-        
-        // Add some final reverb tail
-        std::cout << "🎵 Adding reverb tail..." << std::endl;
+
+        std::cout << "🎵 Adding fade-out tail..." << std::endl;
         for (int i = 0; i < 50; ++i) {
-            auto audio_buffer = piano_synthesizer_->generateAudioBuffer(buffer_size_);
-            complete_audio.insert(complete_audio.end(), audio_buffer.begin(), audio_buffer.end());
+            instrument_->generate_audio(&buffer);
+            complete_audio.insert(complete_audio.end(), temp.begin(), temp.end());
         }
-        
-        // Apply simple smoothing and save audio to 32-bit WAV
+
         auto smoothed = smoothAudio(complete_audio, 0.1f);
         Utils::WavWriter::write(smoothed, "mary_had_a_little_lamb.wav",
-                                static_cast<int>(sample_rate_), 2, 32);
+                                static_cast<int>(sample_rate_), 2, 64);
         
         std::cout << "✅ Playback complete!" << std::endl;
         std::cout << "📁 Audio saved to: mary_had_a_little_lamb.wav" << std::endl;
@@ -173,63 +174,24 @@ public:
     }
     
 private:
-    void setupTestConfiguration() {
-        // Setup optimized configuration for demo
-        config_manager_->setDouble("audio.sample_rate", sample_rate_);
-        config_manager_->setInt("audio.buffer_size", buffer_size_);
-        config_manager_->setInt("audio.channels", 2);
-        
-        // Synthesis settings
-        config_manager_->setInt("synthesis.max_voices", 16);
-        config_manager_->setFloat("synthesis.master_volume", 0.8f);
-        config_manager_->setDouble("synthesis.velocity_sensitivity", 0.02);
-        
-        // String physics - lighter settings for demo
-        config_manager_->setDouble("string.tension_base", 800.0);
-        config_manager_->setDouble("string.damping", 0.003);
-        config_manager_->setDouble("string.stiffness", 5e-6);
-        
-        // Resonance settings
-        config_manager_->setInt("resonance.max_harmonics", 16);
-        config_manager_->setDouble("resonance.harmonic_decay", 0.85);
-        config_manager_->setDouble("resonance.sympathetic_resonance", 0.05);
-        
-        // Room acoustics
-        config_manager_->setDouble("room.size", 8.0);
-        config_manager_->setDouble("room.reverb_time", 1.2);
-        config_manager_->setDouble("room.damping", 0.25);
-    }
     
-    Abstraction::NoteEvent createNoteOnEvent(int note_number, float velocity) {
-        Abstraction::NoteEvent event;
-        event.type = Abstraction::NoteEvent::NOTE_ON;
+    Interfaces::MusicalEvent createNoteOnEvent(int note_number, float velocity) {
+        Interfaces::MusicalEvent event;
+        event.type = Interfaces::EventType::NOTE_ON;
+        event.timestamp = std::chrono::high_resolution_clock::now();
         event.note_number = note_number;
         event.velocity = velocity;
-        event.hammer_velocity = velocity * 3.5f;
-        event.string_excitation = velocity * velocity * 2.5f;
-        event.damper_position = 1.0f;
-        event.sustain_pedal = false;
-        event.soft_pedal = false;
-        event.sostenuto_pedal = false;
-        event.pitch_bend = 0.0f;
-        event.aftertouch = 0.0f;
-        event.press_time = std::chrono::high_resolution_clock::now();
         
         return event;
     }
-    
-    Abstraction::NoteEvent createNoteOffEvent(int note_number) {
-        Abstraction::NoteEvent event;
-        event.type = Abstraction::NoteEvent::NOTE_OFF;
+
+    Interfaces::MusicalEvent createNoteOffEvent(int note_number) {
+        Interfaces::MusicalEvent event;
+        event.type = Interfaces::EventType::NOTE_OFF;
+        event.timestamp = std::chrono::high_resolution_clock::now();
         event.note_number = note_number;
         event.release_velocity = 0.5f;
-        event.damper_position = 0.0f;
-        event.sustain_pedal = false;
-        event.soft_pedal = false;
-        event.sostenuto_pedal = false;
-        event.pitch_bend = 0.0f;
-        event.release_time = std::chrono::high_resolution_clock::now();
-        
+
         return event;
     }
     
@@ -283,9 +245,7 @@ private:
     }
     
     std::unique_ptr<Utils::Logger> logger_;
-    std::unique_ptr<Utils::ConfigManager> config_manager_;
-    std::unique_ptr<Abstraction::InputAbstractor> input_abstractor_;
-    std::unique_ptr<Synthesis::PianoSynthesizer> piano_synthesizer_;
+    Interfaces::IInstrumentSynthesizer* instrument_ = nullptr;
     
     double sample_rate_;
     int buffer_size_;
@@ -294,12 +254,11 @@ private:
 int main() {
     std::cout << "🎼 Piano Synthesizer Demo Application" << std::endl;
     std::cout << "=====================================" << std::endl;
-    std::cout << "This demo plays 'Mary Had a Little Lamb' using the physical modeling" << std::endl;
-    std::cout << "piano synthesizer, showcasing the complete audio pipeline:" << std::endl;
-    std::cout << "  1. Note events → Input Abstraction Layer" << std::endl;
-    std::cout << "  2. Abstracted events → Piano Synthesizer" << std::endl;
-    std::cout << "  3. Physical modeling synthesis (strings, hammers, resonance)" << std::endl;
-    std::cout << "  4. Audio generation → WAV file output" << std::endl;
+    std::cout << "This demo plays 'Mary Had a Little Lamb' using a simple oscillator" << std::endl;
+    std::cout << "instrument to demonstrate basic audio generation:" << std::endl;
+    std::cout << "  1. Note events" << std::endl;
+    std::cout << "  2. Oscillator synthesis" << std::endl;
+    std::cout << "  3. Audio generation → WAV file output" << std::endl;
     std::cout << std::endl;
     
     try {
@@ -325,7 +284,7 @@ int main() {
         std::cout << "\n💡 To listen to the generated audio:" << std::endl;
         std::cout << "   - Open 'mary_had_a_little_lamb.wav' in any audio player" << std::endl;
         std::cout << "   - The file contains the complete synthesized performance" << std::endl;
-        std::cout << "   - You'll hear realistic piano sounds with physical modeling" << std::endl;
+        std::cout << "   - You'll hear simple sine wave tones from the oscillator" << std::endl;
         
     } catch (const std::exception& e) {
         std::cerr << "❌ Demo failed with exception: " << e.what() << std::endl;

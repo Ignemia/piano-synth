@@ -41,6 +41,11 @@ fi
 # Check for required dependencies
 print_status "Checking dependencies..."
 
+# High bitrate settings used for demo playback
+BIT_DEPTH=64
+SAMPLE_RATE=192000
+print_status "Using WAV output at ${SAMPLE_RATE} Hz, ${BIT_DEPTH}-bit"
+
 check_dependency() {
     if command -v "$1" >/dev/null 2>&1; then
         print_success "$1 found"
@@ -171,7 +176,7 @@ echo ""
 # Quick demo test
 if [ -f "./demo_tune" ]; then
     print_status "Testing demo_tune executable..."
-    timeout 10s ./demo_tune > /dev/null 2>&1 && print_success "demo_tune runs successfully" || print_warning "demo_tune test timed out (this is normal)"
+    timeout 10s BIT_DEPTH=${BIT_DEPTH} SAMPLE_RATE=${SAMPLE_RATE} ./demo_tune > /dev/null 2>&1 && print_success "demo_tune runs successfully" || print_warning "demo_tune test timed out (this is normal)"
 fi
 
 echo ""
@@ -184,11 +189,12 @@ echo "  ✅ Sound quality test completed"
 if [ -f "piano_sound_test.wav" ]; then
     echo "  ✅ Test audio files generated"
 fi
+echo "  ✅ High bitrate demo settings: ${SAMPLE_RATE} Hz / ${BIT_DEPTH}-bit"
 echo ""
 
 print_status "🚀 Next steps:"
 echo "  1. Listen to the generated WAV files to verify sound quality"
-echo "  2. The piano should now sound musical rather than static-like"
+echo "  2. The oscillator demo should now produce clean sine tones"
 echo "  3. Run './piano_synth' to start the interactive synthesizer"
 echo "  4. Run './demo_tune' for a pre-programmed melody demonstration"
 echo ""
