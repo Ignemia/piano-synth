@@ -50,6 +50,7 @@ include_directories(
     ${CMAKE_SOURCE_DIR}
     ${CMAKE_SOURCE_DIR}/core
     ${CMAKE_SOURCE_DIR}/shared
+    ${CMAKE_SOURCE_DIR}/third_party
     ${PORTAUDIO_INCLUDE_DIR}
     ${LAME_INCLUDE_DIR}
     ${RTMIDI_INCLUDE_DIR}
