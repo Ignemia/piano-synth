@@ -48,14 +48,12 @@ void StringModel::initialize(double sample_rate) {
     excitation_force_ = 0.0;
     prev_wave_output_ = 0.0;
 
-    // [AI GENERATED] Precompute harmonic tables for additive synthesis
     updateHarmonics();
-
-    // [AI GENERATED] Set up discretized string state for the wave equation
     // Enforce CFL condition r = c * dt / dx <= 0.5 for stability
     double min_dx = wave_speed_ * dt_ * 2.0;
     num_points_ = static_cast<int>(length_ / min_dx) + 1;
     num_points_ = std::clamp(num_points_, 32, 128);
+
     dx_ = length_ / static_cast<double>(num_points_ - 1);
     displacement_.assign(num_points_, 0.0);
     displacement_prev_.assign(num_points_, 0.0);
@@ -111,7 +109,6 @@ double StringModel::step() {
         }
         signal += harmonic_amplitudes_[i] * sin(harmonic_phases_[i]);
     }
-
     // [AI GENERATED] Update the full wave equation model
     updateWaveEquation();
     applyBoundaryConditions();
@@ -159,6 +156,7 @@ void StringModel::updateWaveEquation() {
     for (int i = 2; i < num_points_ - 2; ++i) {
         double wave_term = r2 * (displacement_prev_[i + 1] - 2.0 * displacement_prev_[i] + displacement_prev_[i - 1]);
         double stiffness_term = stiffness_factor * (displacement_prev_[i + 2] - 4.0 * displacement_prev_[i + 1] + 6.0 * displacement_prev_[i] - 4.0 * displacement_prev_[i - 1] + displacement_prev_[i - 2]);
+
         double damp_term = -damping_coefficient_ * (displacement_prev_[i] - displacement_prev2_[i]);
         new_disp[i] = 2.0 * displacement_prev_[i] - displacement_prev2_[i] + wave_term + stiffness_term + damp_term;
     }
@@ -235,6 +233,7 @@ void StringModel::updateHarmonics() {
         double freq = fundamental_frequency_ * static_cast<double>(h) *
                       std::sqrt(1.0 + inharmonicity_coefficient_ * h * h);
         if (freq >= sample_rate_ / 4.0) {
+
             break; // avoid aliasing
         }
         harmonic_frequencies_.push_back(freq);
