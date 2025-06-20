@@ -24,11 +24,16 @@ StringModel::StringModel(int note_number)
     // Calculate cross-sectional area and linear density
     cross_sectional_area_ = Utils::MathUtils::PI * diameter_ * diameter_ / 4.0;
     linear_density_ = Constants::STRING_DENSITY * cross_sectional_area_;
-    
+
     // Calculate string length for the desired fundamental frequency
     wave_speed_ = Utils::MathUtils::calculateStringWaveSpeed(tension_, linear_density_);
     length_ = wave_speed_ / (2.0 * fundamental_frequency_);
     length_ = Utils::MathUtils::clamp(length_, 0.1, 2.5);
+
+    // [AI GENERATED] Calculate initial inharmonicity coefficient
+    double r = diameter_ / 2.0;
+    inharmonicity_coefficient_ = (std::pow(Utils::MathUtils::PI, 3) * Constants::YOUNG_MODULUS * std::pow(r, 4)) /
+                                 (4.0 * tension_ * length_ * length_);
 }
 
 StringModel::~StringModel() = default;
@@ -40,6 +45,17 @@ void StringModel::initialize(double sample_rate) {
     amplitude_ = 0.0;
     excitation_time_ = 0.0;
     excitation_force_ = 0.0;
+
+    // [AI GENERATED] Precompute harmonic tables for additive synthesis
+    updateHarmonics();
+
+    // [AI GENERATED] Set up discretized string state for the wave equation
+    num_points_ = 64; // simple discretization
+    dx_ = length_ / static_cast<double>(num_points_ - 1);
+    displacement_.assign(num_points_, 0.0);
+    displacement_prev_.assign(num_points_, 0.0);
+    displacement_prev2_.assign(num_points_, 0.0);
+    velocity_.assign(num_points_, 0.0);
 }
 
 void StringModel::reset() {
@@ -53,6 +69,11 @@ void StringModel::calculatePhysicalProperties() {
     cross_sectional_area_ = Utils::MathUtils::PI * diameter_ * diameter_ / 4.0;
     linear_density_ = Constants::STRING_DENSITY * cross_sectional_area_;
     wave_speed_ = Utils::MathUtils::calculateStringWaveSpeed(tension_, linear_density_);
+
+    // [AI GENERATED] Update inharmonicity coefficient based on current parameters
+    double r = diameter_ / 2.0;
+    inharmonicity_coefficient_ = (std::pow(Utils::MathUtils::PI, 3) * Constants::YOUNG_MODULUS * std::pow(r, 4)) /
+                                 (4.0 * tension_ * length_ * length_);
 }
 
 void StringModel::excite(double position, double force, double duration) {
@@ -75,21 +96,25 @@ double StringModel::step() {
     
     excitation_time_ += dt_;
     
-    // Generate oscillation at fundamental frequency
-    phase_ += 2.0 * Utils::MathUtils::PI * fundamental_frequency_ * dt_;
-    if (phase_ > 2.0 * Utils::MathUtils::PI) {
-        phase_ -= 2.0 * Utils::MathUtils::PI;
+    // [AI GENERATED] Generate additive signal from harmonic table
+    double signal = 0.0;
+    for (size_t i = 0; i < harmonic_frequencies_.size(); ++i) {
+        harmonic_phases_[i] += 2.0 * Utils::MathUtils::PI * harmonic_frequencies_[i] * dt_;
+        if (harmonic_phases_[i] > 2.0 * Utils::MathUtils::PI) {
+            harmonic_phases_[i] -= 2.0 * Utils::MathUtils::PI;
+        }
+        signal += harmonic_amplitudes_[i] * sin(harmonic_phases_[i]);
     }
-    
-    // Create rich harmonic content
-    double fundamental = sin(phase_);
-    double harmonic2 = 0.4 * sin(2.0 * phase_);
-    double harmonic3 = 0.2 * sin(3.0 * phase_);
-    double harmonic4 = 0.1 * sin(4.0 * phase_);
-    double harmonic5 = 0.05 * sin(5.0 * phase_);
-    
-    double signal = fundamental + harmonic2 + harmonic3 + harmonic4 + harmonic5;
-    
+    // [AI GENERATED] Update the full wave equation model
+    updateWaveEquation();
+    applyBoundaryConditions();
+    applyExcitation();
+    applyDamping();
+
+    // Sample displacement near the pickup position (1/8 from the end)
+    double pickup_pos = 0.125;
+    double wave_output = interpolateDisplacement(pickup_pos);
+
     // [AI GENERATED] Apply realistic string decay with pedal influence
     // Base decay from air damping
     double decay_rate = damping_coefficient_;
@@ -103,24 +128,54 @@ double StringModel::step() {
     // Apply velocity-dependent brightness
     double velocity_brightness = Utils::MathUtils::clamp(excitation_force_ / 5.0, 0.3, 1.0);
     signal *= velocity_brightness;
-    
-    return signal * amplitude_ * 0.3; // Scale for reasonable output level
+
+    // Blend harmonic model with wave equation output
+    double blended = signal * amplitude_ * 0.3 + wave_output * amplitude_;
+    return blended;
 }
 
 void StringModel::updateWaveEquation() {
-    // Not used in simplified model
+    // [AI GENERATED] Simple finite difference string update
+    if (num_points_ < 5) return;
+
+    std::vector<double> new_disp(num_points_, 0.0);
+    double r = (wave_speed_ * dt_) / dx_;
+    double r2 = r * r;
+    double stiffness_factor = stiffness_coefficient_ * dt_ * dt_ / (dx_ * dx_ * dx_ * dx_);
+
+    for (int i = 2; i < num_points_ - 2; ++i) {
+        double wave_term = r2 * (displacement_prev_[i+1] - 2.0 * displacement_prev_[i] + displacement_prev_[i-1]);
+        double stiffness_term = stiffness_factor * (displacement_prev_[i+2] - 4.0 * displacement_prev_[i+1] + 6.0 * displacement_prev_[i] - 4.0 * displacement_prev_[i-1] + displacement_prev_[i-2]);
+        double damp_term = -damping_coefficient_ * (displacement_prev_[i] - displacement_prev2_[i]);
+        new_disp[i] = 2.0 * displacement_prev_[i] - displacement_prev2_[i] + wave_term + stiffness_term + damp_term;
+    }
+
+    displacement_prev2_ = displacement_prev_;
+    displacement_prev_ = new_disp;
+    displacement_ = new_disp;
 }
 
 void StringModel::applyBoundaryConditions() {
-    // Not used in simplified model
+    if (num_points_ < 2) return;
+
+    displacement_prev_[0] = 0.0;
+    displacement_prev_[num_points_ - 1] *= (1.0 - damper_position_);
 }
 
 void StringModel::applyExcitation() {
-    // Not used in simplified model
+    if (excitation_time_ <= excitation_duration_) {
+        int index = static_cast<int>((excitation_position_ / length_) * (num_points_ - 1));
+        if (index >= 0 && index < num_points_) {
+            displacement_prev_[index] += excitation_force_ * dt_ * 0.1;
+        }
+    }
 }
 
 void StringModel::applyDamping() {
-    // Not used in simplified model
+    double factor = 1.0 - damping_coefficient_ * dt_;
+    for (double &d : displacement_prev_) {
+        d *= factor;
+    }
 }
 
 double StringModel::calculateStiffnessEffect(int point) {
@@ -152,7 +207,23 @@ double StringModel::interpolateDisplacement(double position) {
 }
 
 void StringModel::updateHarmonics() {
-    // Not used in simplified model
+    // [AI GENERATED] Build harmonic tables with exponential decay
+    harmonic_frequencies_.clear();
+    harmonic_amplitudes_.clear();
+    harmonic_phases_.clear();
+
+    const int max_harmonics = Constants::MAX_HARMONICS;
+    for (int h = 1; h <= max_harmonics; ++h) {
+        double freq = fundamental_frequency_ * static_cast<double>(h) *
+                      std::sqrt(1.0 + inharmonicity_coefficient_ * h * h);
+        if (freq >= sample_rate_ / 3.0) {
+            break; // avoid aliasing
+        }
+        harmonic_frequencies_.push_back(freq);
+        double amp = std::pow(Constants::HARMONIC_DECAY, h - 1) / (static_cast<double>(h) * static_cast<double>(h));
+        harmonic_amplitudes_.push_back(amp);
+        harmonic_phases_.push_back(0.0);
+    }
 }
 
 double StringModel::getCurrentAmplitude() const {
@@ -163,27 +234,32 @@ void StringModel::setTension(double tension) {
     tension_ = tension;
     calculatePhysicalProperties();
     fundamental_frequency_ = wave_speed_ / (2.0 * length_);
+    updateHarmonics();
 }
 
 void StringModel::setDamperPosition(double position) {
     damper_position_ = Utils::MathUtils::clamp(position, 0.0, 1.0);
 }
 
-void StringModel::setLength(double length) { 
-    length_ = length; 
-    calculatePhysicalProperties(); 
+void StringModel::setLength(double length) {
+    length_ = length;
+    calculatePhysicalProperties();
+    fundamental_frequency_ = wave_speed_ / (2.0 * length_);
+    updateHarmonics();
 }
 
-void StringModel::setDiameter(double diameter) { 
-    diameter_ = diameter; 
-    calculatePhysicalProperties(); 
+void StringModel::setDiameter(double diameter) {
+    diameter_ = diameter;
+    calculatePhysicalProperties();
+    updateHarmonics();
 }
 
-void StringModel::setDensity(double density) { 
+void StringModel::setDensity(double density) {
     // Update linear density and recalculate wave speed
     linear_density_ = density * cross_sectional_area_;
     wave_speed_ = Utils::MathUtils::calculateStringWaveSpeed(tension_, linear_density_);
     fundamental_frequency_ = wave_speed_ / (2.0 * length_);
+    updateHarmonics();
 }
 
 void StringModel::setDamping(double damping) { 
