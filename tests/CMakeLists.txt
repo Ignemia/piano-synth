@@ -57,6 +57,20 @@ target_link_libraries(test_config_manager
     Threads::Threads
 )
 
+add_executable(test_note_params_manager
+    test_main.cpp
+    test_note_params_manager.cpp
+)
+
+target_link_libraries(test_note_params_manager
+    piano_synthesis
+    piano_physics
+    piano_utils
+    test_utils
+    ${GTEST_LIBRARIES}
+    Threads::Threads
+)
+
 add_executable(test_string_model
     test_main.cpp
     test_string_model.cpp
@@ -179,6 +193,7 @@ target_link_libraries(test_integration
 # Register all tests with CTest
 add_test(NAME MathUtils COMMAND test_math_utils)
 add_test(NAME ConfigManager COMMAND test_config_manager)
+add_test(NAME NoteParamsManager COMMAND test_note_params_manager)
 add_test(NAME StringModel COMMAND test_string_model)
 add_test(NAME HammerModel COMMAND test_hammer_model)
 add_test(NAME WaveEquation COMMAND test_wave_equation)
@@ -192,6 +207,7 @@ add_test(NAME SystemIntegration COMMAND test_integration)
 # Set test properties
 set_tests_properties(MathUtils PROPERTIES TIMEOUT 30)
 set_tests_properties(ConfigManager PROPERTIES TIMEOUT 30)
+set_tests_properties(NoteParamsManager PROPERTIES TIMEOUT 30)
 set_tests_properties(StringModel PROPERTIES TIMEOUT 60)
 set_tests_properties(HammerModel PROPERTIES TIMEOUT 60)
 set_tests_properties(WaveEquation PROPERTIES TIMEOUT 60)
@@ -204,8 +220,8 @@ set_tests_properties(SystemIntegration PROPERTIES TIMEOUT 180)
 
 # Custom test targets for different test categories
 add_custom_target(test_unit
-    COMMAND ${CMAKE_CTEST_COMMAND} -R "MathUtils|ConfigManager|StringModel|HammerModel|WaveEquation|AbstractionLayer|NoteEvents" --output-on-failure
-    DEPENDS test_math_utils test_config_manager test_string_model test_hammer_model test_wave_equation test_abstraction_layer test_note_events
+    COMMAND ${CMAKE_CTEST_COMMAND} -R "MathUtils|ConfigManager|NoteParamsManager|StringModel|HammerModel|WaveEquation|AbstractionLayer|NoteEvents" --output-on-failure
+    DEPENDS test_math_utils test_config_manager test_note_params_manager test_string_model test_hammer_model test_wave_equation test_abstraction_layer test_note_events
     COMMENT "Running unit tests"
 )
 

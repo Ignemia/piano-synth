@@ -1,4 +1,5 @@
 #pragma once
+// [AI GENERATED]
 
 #include "../utils/constants.h"
 #include <vector>
@@ -27,6 +28,15 @@ public:
     void setDensity(double density);
     void setDamping(double damping);
     void setStiffness(double stiffness);
+    /**
+     * \brief [AI GENERATED] Set the number of harmonics to generate.
+     */
+    void setNumHarmonics(int num);
+
+    /**
+     * \brief [AI GENERATED] Explicitly set the inharmonicity coefficient B.
+     */
+    void setInharmonicityCoefficient(double B);
     
     // Excitation and damping
     void excite(double position, double force, double duration);
@@ -53,6 +63,10 @@ public:
     double getFundamentalFrequency() const { return fundamental_frequency_; }
     double getLength() const { return length_; }
     double getTension() const { return tension_; }
+    /**
+     * \brief [AI GENERATED] Retrieve the internal damping coefficient.
+     */
+    double getDamping() const { return damping_coefficient_; }
     double getCurrentAmplitude() const;
 
     /**
@@ -163,6 +177,8 @@ private:
 
     // Inharmonicity coefficient
     double inharmonicity_coefficient_;
+    // [AI GENERATED] Maximum number of harmonics to model
+    int num_harmonics_;
 };
 
 } // namespace Physics

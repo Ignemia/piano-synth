@@ -62,6 +62,7 @@ add_library(piano_utils STATIC
     core/utils/logger.cpp
     core/utils/math_utils.cpp
     core/utils/config_manager.cpp
+    core/utils/note_params_manager.cpp
 )
 
 target_link_libraries(piano_utils
