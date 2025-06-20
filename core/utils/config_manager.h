@@ -2,7 +2,7 @@
 
 #include <string>
 #include <memory>
-#include "../../third_party/json.hpp"
+#include <nlohmann/json.hpp>
 
 namespace PianoSynth {
 namespace Utils {

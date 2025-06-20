@@ -5,11 +5,13 @@
 namespace PianoSynth {
 namespace Utils {
 
+// Log levels for the lightweight logger implementation. Prefixed with 'k'
+// to avoid macro conflicts such as DEBUG on some compilers. [AI GENERATED]
 enum class LogLevel {
-    DEBUG,
-    INFO,
-    WARNING,
-    ERROR
+    kDebug,
+    kInfo,
+    kWarning,
+    kError
 };
 
 class Logger {

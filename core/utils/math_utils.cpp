@@ -90,6 +90,10 @@ double MathUtils::randomGaussian(double mean, double std_dev) {
 
 // DSP Utils Implementation
 
+/**
+ * Apply a simple soft clipping curve that smoothly limits the signal
+ * to the range [-1, 1]. [AI GENERATED]
+ */
 double DSPUtils::softClip(double input, double threshold) {
     double abs_input = std::abs(input);
     if (abs_input <= threshold) {
@@ -99,6 +103,7 @@ double DSPUtils::softClip(double input, double threshold) {
         // Improved soft clipping with smoother transition
         double excess = abs_input - threshold;
         double compressed = threshold + excess / (1.0 + excess * 2.0);
+        compressed = std::min(compressed, 1.0); // Ensure output never exceeds 1
         return sign * compressed;
     }
 }

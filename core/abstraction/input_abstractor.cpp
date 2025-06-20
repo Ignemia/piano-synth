@@ -108,6 +108,11 @@ NoteEvent InputAbstractor::createNoteOffEvent(const Input::RawMidiEvent& raw_eve
     return event;
 }
 
+/**
+ * Translate a raw MIDI control change event into a pedal change note event.
+ * Values are normalized so a threshold of 0.5 represents MIDI value 64.
+ * [AI GENERATED]
+ */
 NoteEvent InputAbstractor::createPedalEvent(const Input::RawMidiEvent& raw_event) {
     NoteEvent event;
     event.type = NoteEvent::PEDAL_CHANGE;
@@ -115,9 +120,11 @@ NoteEvent InputAbstractor::createPedalEvent(const Input::RawMidiEvent& raw_event
     int controller = extractController(raw_event.data);
     float value = extractControllerValue(raw_event.data);
     
-    // Update pedal states based on controller value
+    // Update pedal states based on controller value. The incoming value is
+    // normalized (0.0 - 1.0), so compare against 0.5 to emulate the standard
+    // MIDI threshold of 64. [AI GENERATED]
     if (controller == Constants::MIDI_SUSTAIN_PEDAL) {
-        sustain_pedal_ = (value > 64.0f); // MIDI standard: >64 = on
+        sustain_pedal_ = (value > 0.5f);
     }
     
     // Set pedal states

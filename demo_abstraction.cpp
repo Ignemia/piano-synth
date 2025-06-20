@@ -13,7 +13,7 @@ using namespace PianoSynth;
 class AbstractionDemo {
 public:
     AbstractionDemo() {
-        logger_ = std::make_unique<Utils::Logger>(Utils::LogLevel::INFO);
+        logger_ = std::make_unique<Utils::Logger>(Utils::LogLevel::kInfo);
         logger_->setLogToConsole(true);
         
         abstractor_ = std::make_unique<Abstraction::InputAbstractor>();
