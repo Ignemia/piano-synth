@@ -3,6 +3,7 @@
 #include "../core/abstraction/note_event.h"
 #include "../core/utils/config_manager.h"
 #include "../core/utils/constants.h"
+#include "test_helpers.h"
 #include <memory>
 #include <chrono>
 #include <cmath>
@@ -498,4 +499,62 @@ TEST_F(PianoSynthesizerTest, SoftPedal) {
     
     auto note_off2 = createNoteOffEvent(test_note);
     piano_synthesizer->processNoteEvent(note_off2);
+}
+
+// [AI GENERATED] Verify that different notes produce different fundamental pitches
+TEST_F(PianoSynthesizerTest, DifferentPitchForDifferentNotes) {
+    const int note1 = 60;  // Middle C
+    const int note2 = 72;  // One octave higher
+
+    auto ev1 = createNoteOnEvent(note1, 0.8f);
+    piano_synthesizer->processNoteEvent(ev1);
+    auto buf1 = piano_synthesizer->generateAudioBuffer(TEST_BUFFER_SIZE * 4);
+    piano_synthesizer->processNoteEvent(createNoteOffEvent(note1));
+
+    // Flush buffers to silence
+    for (int i = 0; i < 5; ++i) {
+        piano_synthesizer->generateAudioBuffer(TEST_BUFFER_SIZE);
+    }
+
+    auto ev2 = createNoteOnEvent(note2, 0.8f);
+    piano_synthesizer->processNoteEvent(ev2);
+    auto buf2 = piano_synthesizer->generateAudioBuffer(TEST_BUFFER_SIZE * 4);
+    piano_synthesizer->processNoteEvent(createNoteOffEvent(note2));
+
+    double sr = config_manager->getDouble("audio.sample_rate", Constants::SAMPLE_RATE);
+    double f1 = Testing::TestHelpers::estimateFrequency(buf1, sr);
+    double f2 = Testing::TestHelpers::estimateFrequency(buf2, sr);
+
+    EXPECT_GT(f1, 0.0);
+    EXPECT_GT(f2, 0.0);
+    EXPECT_NEAR(f2 / f1, 2.0, 0.2);
+}
+
+// [AI GENERATED] Sustain pedal should slow down the decay of a released note
+TEST_F(PianoSynthesizerTest, SustainPedalSlowsDecayRate) {
+    const int note = 60;
+
+    auto on1 = createNoteOnEvent(note, 0.8f);
+    piano_synthesizer->processNoteEvent(on1);
+    piano_synthesizer->generateAudioBuffer(TEST_BUFFER_SIZE);
+    piano_synthesizer->processNoteEvent(createNoteOffEvent(note));
+    for (int i = 0; i < 10; ++i) {
+        piano_synthesizer->generateAudioBuffer(TEST_BUFFER_SIZE);
+    }
+    auto buf_off = piano_synthesizer->generateAudioBuffer(TEST_BUFFER_SIZE);
+    float rms_off = Testing::TestHelpers::calculateRMS(buf_off);
+
+    piano_synthesizer->processNoteEvent(createPedalEvent(true, false));
+    auto on2 = createNoteOnEvent(note, 0.8f);
+    piano_synthesizer->processNoteEvent(on2);
+    piano_synthesizer->generateAudioBuffer(TEST_BUFFER_SIZE);
+    piano_synthesizer->processNoteEvent(createNoteOffEvent(note));
+    for (int i = 0; i < 10; ++i) {
+        piano_synthesizer->generateAudioBuffer(TEST_BUFFER_SIZE);
+    }
+    auto buf_pedal = piano_synthesizer->generateAudioBuffer(TEST_BUFFER_SIZE);
+    float rms_pedal = Testing::TestHelpers::calculateRMS(buf_pedal);
+    piano_synthesizer->processNoteEvent(createPedalEvent(false, false));
+
+    EXPECT_GT(rms_pedal, rms_off);
 }
