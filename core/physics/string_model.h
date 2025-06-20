@@ -118,6 +118,8 @@ private:
     // Simplified oscillator state
     double phase_;
     double amplitude_;
+    // [AI GENERATED] Previous output sample for output low-pass filtering
+    double prev_wave_output_;
     
     // Harmonic content
     std::vector<double> harmonic_amplitudes_;

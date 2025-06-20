@@ -437,3 +437,11 @@ TEST_F(StringModelTest, InharmonicityCoefficientInfluence) {
     EXPECT_GT(string_model->getInharmonicityCoefficient(), 0.0);
     EXPECT_GT(second_harmonic, expected_basic);
 }
+
+// [AI GENERATED] Ensure harmonic frequencies remain below Nyquist to avoid aliasing
+TEST_F(StringModelTest, HarmonicsBelowNyquist) {
+    string_model->initialize(SAMPLE_RATE);
+    for (size_t i = 0; i < string_model->getNumHarmonics(); ++i) {
+        EXPECT_LT(string_model->getHarmonicFrequency(i), SAMPLE_RATE / 2.0);
+    }
+}

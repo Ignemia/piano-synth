@@ -2,6 +2,7 @@
 #include "../utils/math_utils.h"
 #include "../utils/constants.h"
 #include <cmath>
+#include <algorithm>
 
 namespace PianoSynth {
 namespace Physics {
@@ -45,12 +46,14 @@ void StringModel::initialize(double sample_rate) {
     amplitude_ = 0.0;
     excitation_time_ = 0.0;
     excitation_force_ = 0.0;
+    prev_wave_output_ = 0.0;
 
-    // [AI GENERATED] Precompute harmonic tables for additive synthesis
     updateHarmonics();
+    // Enforce CFL condition r = c * dt / dx <= 0.5 for stability
+    double min_dx = wave_speed_ * dt_ * 2.0;
+    num_points_ = static_cast<int>(length_ / min_dx) + 1;
+    num_points_ = std::clamp(num_points_, 32, 128);
 
-    // [AI GENERATED] Set up discretized string state for the wave equation
-    num_points_ = 64; // simple discretization
     dx_ = length_ / static_cast<double>(num_points_ - 1);
     displacement_.assign(num_points_, 0.0);
     displacement_prev_.assign(num_points_, 0.0);
@@ -63,6 +66,7 @@ void StringModel::reset() {
     amplitude_ = 0.0;
     excitation_force_ = 0.0;
     excitation_time_ = 0.0;
+    prev_wave_output_ = 0.0;
 }
 
 void StringModel::calculatePhysicalProperties() {
@@ -131,6 +135,12 @@ double StringModel::step() {
 
     // Blend harmonic model with wave equation output
     double blended = signal * amplitude_ * 0.3 + wave_output * amplitude_;
+
+    // [AI GENERATED] Smooth final output with one-pole low-pass filter
+    double alpha = 0.98;
+    blended = alpha * blended + (1.0 - alpha) * prev_wave_output_;
+    prev_wave_output_ = blended;
+
     return blended;
 }
 
@@ -144,10 +154,16 @@ void StringModel::updateWaveEquation() {
     double stiffness_factor = stiffness_coefficient_ * dt_ * dt_ / (dx_ * dx_ * dx_ * dx_);
 
     for (int i = 2; i < num_points_ - 2; ++i) {
-        double wave_term = r2 * (displacement_prev_[i+1] - 2.0 * displacement_prev_[i] + displacement_prev_[i-1]);
-        double stiffness_term = stiffness_factor * (displacement_prev_[i+2] - 4.0 * displacement_prev_[i+1] + 6.0 * displacement_prev_[i] - 4.0 * displacement_prev_[i-1] + displacement_prev_[i-2]);
+        double wave_term = r2 * (displacement_prev_[i + 1] - 2.0 * displacement_prev_[i] + displacement_prev_[i - 1]);
+        double stiffness_term = stiffness_factor * (displacement_prev_[i + 2] - 4.0 * displacement_prev_[i + 1] + 6.0 * displacement_prev_[i] - 4.0 * displacement_prev_[i - 1] + displacement_prev_[i - 2]);
+
         double damp_term = -damping_coefficient_ * (displacement_prev_[i] - displacement_prev2_[i]);
         new_disp[i] = 2.0 * displacement_prev_[i] - displacement_prev2_[i] + wave_term + stiffness_term + damp_term;
+    }
+
+    // [AI GENERATED] Apply spatial smoothing to reduce numerical noise
+    for (int i = 1; i < num_points_ - 1; ++i) {
+        new_disp[i] = 0.25 * new_disp[i - 1] + 0.5 * new_disp[i] + 0.25 * new_disp[i + 1];
     }
 
     displacement_prev2_ = displacement_prev_;
@@ -216,7 +232,8 @@ void StringModel::updateHarmonics() {
     for (int h = 1; h <= max_harmonics; ++h) {
         double freq = fundamental_frequency_ * static_cast<double>(h) *
                       std::sqrt(1.0 + inharmonicity_coefficient_ * h * h);
-        if (freq >= sample_rate_ / 3.0) {
+        if (freq >= sample_rate_ / 4.0) {
+
             break; // avoid aliasing
         }
         harmonic_frequencies_.push_back(freq);
