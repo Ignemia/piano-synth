@@ -105,7 +105,6 @@ double StringModel::step() {
         }
         signal += harmonic_amplitudes_[i] * sin(harmonic_phases_[i]);
     }
-
     // [AI GENERATED] Update the full wave equation model
     updateWaveEquation();
     applyBoundaryConditions();
