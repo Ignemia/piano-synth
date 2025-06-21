@@ -1,12 +1,13 @@
-#include "MidiInput.h"
-#include "Abstractor.h"
-#include "NoteSynth.h"
-#include "OutputHandler.h"
+#include "../include/MidiInput.h"
+#include "../include/Abstractor.h"
+#include "../include/NoteSynth.h"
+#include "../include/OutputHandler.h"
 #include <cassert>
 #include <cmath>
 #include <filesystem>
 #include <iostream>
 #include <cstdlib>
+#include <cstdint>
 
 /**
  * @brief [AI GENERATED] Basic integration tests for synthesizer modules.
@@ -53,16 +54,13 @@ int main() {
         maxVal = std::max(maxVal, std::abs(s));
     }
     assert(maxVal <= 1.0);
-
-
-    double maxVal = 0.0;
     for (double s : samples) {
         maxVal = std::max(maxVal, std::abs(s));
     }
     assert(maxVal <= 1.0);
 
     OutputHandler out;
-    const std::string file = "test.wav";
+    std::string file = "test.wav";
     out.writeWav(samples, file, 8000);
     assert(std::filesystem::exists(file));
     std::uintmax_t size = std::filesystem::file_size(file);
@@ -70,4 +68,5 @@ int main() {
     std::filesystem::remove(file);
 
     std::cout << "All tests passed\n";
+    return 0;
 }

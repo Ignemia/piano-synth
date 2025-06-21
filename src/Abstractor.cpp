@@ -1,4 +1,7 @@
-#include "Abstractor.h"
+#include "../include/Abstractor.h"
+
+#include <vector>
+#include <cmath>
 
 /**
  * @brief [AI GENERATED] Perform MIDI to frequency conversion.

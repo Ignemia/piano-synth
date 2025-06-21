@@ -1,4 +1,5 @@
-#include "NoteSynth.h"
+#include "../include/NoteSynth.h"
+#include <vector>
 #include <cmath>
 #include <cstdlib>
 #include <algorithm>

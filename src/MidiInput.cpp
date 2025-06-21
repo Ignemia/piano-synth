@@ -1,4 +1,6 @@
-#include "MidiInput.h"
+#include "../include/MidiInput.h"
+#include <vector>
+#include <cmath>
 
 /**
  * @brief [AI GENERATED] Generates the opening phrase of Fur Elise with
