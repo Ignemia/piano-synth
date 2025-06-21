@@ -74,6 +74,8 @@ double amplitude = excitation_force_ * position_factor * harmonic_decay * freq_r
 - **Enhanced Envelopes**: Implemented more realistic piano decay curves
 - **Strike Parameter Variation**: Varied strike position and force based on velocity
 - **Smooth Release**: Exponential release curves instead of linear
+- **String Noise & Decay**: Basic oscillator now injects gentle noise and
+  automatically decays amplitude to mimic real string vibration
 
 #### Code Example - Improved Audio Processing:
 ```cpp

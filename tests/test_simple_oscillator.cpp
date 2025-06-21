@@ -110,3 +110,47 @@ TEST(SimpleOscillator, FrequencyVariation) {
 
     destroy_instrument_synthesizer(synth);
 }
+
+/**
+ * @brief [AI GENERATED] Verify output amplitude decays over time due to
+ *        string vibration emulation.
+ */
+TEST(SimpleOscillator, AmplitudeDecay) {
+    IInstrumentSynthesizer* synth = create_instrument_synthesizer();
+    ASSERT_NE(synth, nullptr);
+
+    double rate = 192000.0;
+    size_t buffer_size = 256;
+    ASSERT_TRUE(synth->initialize("{}", rate, buffer_size * 4));
+
+    MusicalEvent on;
+    on.type = EventType::NOTE_ON;
+    on.timestamp = std::chrono::high_resolution_clock::now();
+    on.note_number = 60;
+    on.velocity = 1.0f;
+    EXPECT_TRUE(synth->process_events(&on, 1));
+
+    std::vector<float> data(buffer_size * 2 * 16);
+    AudioBuffer buf;
+    buf.samples = data.data();
+    buf.frame_count = buffer_size * 16;
+    buf.channel_count = 2;
+    buf.sample_rate = rate;
+    buf.timestamp = std::chrono::high_resolution_clock::now();
+
+    EXPECT_GT(synth->generate_audio(&buf), 0);
+
+    float early = 0.0f;
+    for (size_t i = 0; i < buffer_size * 2; ++i) {
+        early += std::abs(data[i]);
+    }
+
+    float late = 0.0f;
+    for (size_t i = data.size() - buffer_size * 2; i < data.size(); ++i) {
+        late += std::abs(data[i]);
+    }
+
+    EXPECT_GT(early, late);
+
+    destroy_instrument_synthesizer(synth);
+}
