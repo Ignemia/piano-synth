@@ -1,7 +1,7 @@
 /**
  * @file NoteSynth.h
- * @brief [AI GENERATED] Basic oscillator-based synth with simple
- * string-decay emulation.
+ * @brief [AI GENERATED] Basic oscillator-based synth emulating string
+ * harmonics with subtle hammer noise.
  */
 
 #pragma once
@@ -9,13 +9,14 @@
 #include "Abstractor.h"
 
 /**
- * @brief [AI GENERATED] Converts note events into audio samples.
+ * @brief [AI GENERATED] Converts note events into audio samples. Supports
+ * overlapping notes for simple chord playback.
  */
 class NoteSynth {
 public:
     /**
      * @brief [AI GENERATED] Convert note events to samples using an
-     * exponential decay envelope.
+     * attack-sustain-release envelope and multiple harmonics.
      *
      * @param events Sequence of notes to synthesize.
      * @param sampleRate Target sample rate for output audio.
