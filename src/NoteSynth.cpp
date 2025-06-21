@@ -48,6 +48,7 @@ std::vector<double> NoteSynth::synthesize(const std::vector<NoteEvent>& events,
                 const double dReleaseLen = static_cast<double>(iCount - iSustainStart);
                 dEnvelope = std::exp(-3.0 * dRelease / dReleaseLen);
             }
+
             samples[iStart + i] += dEnvelope * dValue;
         }
     }

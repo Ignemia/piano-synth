@@ -21,6 +21,7 @@ int main() {
     assert(midiData[2].startTime == 0.0);
     assert(midiData[3].startTime == midiData[4].startTime);
 
+
     Abstractor abs;
     auto notes = abs.convert(midiData);
     assert(notes.size() == midiData.size());
