@@ -1,6 +1,7 @@
 /**
  * @file simple_oscillator.cpp
- * @brief [AI GENERATED] Minimal oscillator-based piano instrument implementation.
+ * @brief [AI GENERATED] Minimal oscillator-based piano instrument implementation
+ *        with added string-like behavior through subtle noise and volume decay.
  */
 
 #include "../../shared/interfaces/dll_interfaces.h"
@@ -70,6 +71,12 @@ public:
         return true;
     }
 
+    /**
+     * @brief [AI GENERATED] Generate audio samples for all active voices.
+     *
+     * Adds a small amount of white noise and gradually decays each voice's
+     * amplitude to mimic a vibrating piano string.
+     */
     int generate_audio(Interfaces::AudioBuffer* buffer) override {
         if (!buffer || !buffer->samples || buffer->frame_count == 0) {
             return 0;
@@ -85,9 +92,13 @@ public:
                 double inst_freq =
                     v.base_frequency * v.detune_factor *
                     (1.0 + freq_lfo_depth_ * std::sin(v.lfo_phase));
-                mix += std::sin(v.phase) * v.amplitude;
+                float sample = std::sin(v.phase) * v.amplitude;
+                sample += static_cast<float>(noise_dist_(rng_)) * noise_level_ *
+                          v.amplitude;
+                mix += sample;
                 v.phase += 2.0 * M_PI * inst_freq / sample_rate_;
                 v.lfo_phase += 2.0 * M_PI * freq_lfo_rate_ / sample_rate_;
+                v.amplitude *= amplitude_decay_;
                 if (v.releasing) {
                     v.amplitude -= release_rate_;
                 }
@@ -150,6 +161,9 @@ private:
     const float release_rate_ = 0.001f;
     double freq_lfo_rate_ = 5.0;     ///< Frequency modulation rate in Hz
     double freq_lfo_depth_ = 0.002;  ///< ±depth for frequency modulation
+    const float noise_level_ = 0.01f;          ///< White noise amplitude
+    const float amplitude_decay_ = 0.9996f;    ///< Per-sample decay factor
+    std::uniform_real_distribution<double> noise_dist_{-1.0, 1.0};
     std::mt19937 rng_{std::random_device{}()};
     std::uniform_real_distribution<double> detune_dist_{-0.001, 0.001};
 };
