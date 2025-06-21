@@ -9,7 +9,8 @@
 #include "Abstractor.h"
 
 /**
- * @brief [AI GENERATED] Converts note events into audio samples.
+ * @brief [AI GENERATED] Converts note events into audio samples. Supports
+ * overlapping notes for simple chord playback.
  */
 class NoteSynth {
 public:
