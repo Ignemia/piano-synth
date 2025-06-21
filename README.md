@@ -53,6 +53,7 @@ A realistic piano synthesizer that uses physical modeling instead of sampling. T
 ### Realistic Physics
 - **No Sampling**: Pure mathematical modeling of piano physics
 - **String Theory**: Based on actual string vibration equations
+- **String Noise**: Subtle noise and natural decay emulate real string dynamics
 - **Material Properties**: Uses real physical constants for steel strings, wood soundboard
 - **Harmonic Accuracy**: Natural generation of harmonic content and beating
 
