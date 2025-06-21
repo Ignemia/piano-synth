@@ -3,6 +3,7 @@
 #include "NoteSynth.h"
 #include "OutputHandler.h"
 #include <cassert>
+#include <cmath>
 #include <filesystem>
 #include <iostream>
 
@@ -24,12 +25,15 @@ int main() {
     assert(!samples.empty());
 
     int firstCount = static_cast<int>(notes[0].duration * 8000);
+    assert(firstCount >= static_cast<int>(0.8 * 8000));
     int quarterIdx = static_cast<int>(8000 / (4.0 * notes[0].frequency));
     if (quarterIdx >= firstCount) {
         quarterIdx = 0;
     }
     int endIdx = firstCount - quarterIdx - 1;
-    assert(std::abs(samples[endIdx]) < std::abs(samples[quarterIdx]));
+    assert(samples[0] != 0.0);
+    int sustainIdx = static_cast<int>(firstCount * 0.7);
+    assert(std::abs(samples[endIdx]) < std::abs(samples[sustainIdx]));
 
     OutputHandler out;
     const std::string file = "test.wav";
