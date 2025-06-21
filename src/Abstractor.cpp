@@ -7,7 +7,7 @@ std::vector<NoteEvent> Abstractor::convert(const std::vector<MidiMessage>& midi)
     std::vector<NoteEvent> events;
     for (const auto& msg : midi) {
         double freq = 440.0 * std::pow(2.0, (msg.note - 69) / 12.0);
-        events.push_back({freq, msg.duration});
+        events.push_back({freq, msg.duration, msg.startTime});
     }
     return events;
 }

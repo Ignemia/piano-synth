@@ -8,9 +8,13 @@
 #include <cmath>
 #include "MidiInput.h"
 
+/**
+ * @brief [AI GENERATED] Represents a synthesized note event.
+ */
 struct NoteEvent {
-    double frequency;
-    double duration;
+    double frequency;  /**< Frequency of the note in Hz. */
+    double duration;   /**< Duration of the note in seconds. */
+    double startTime;  /**< Start time of the note in seconds. */
 };
 
 /**

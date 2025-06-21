@@ -9,13 +9,14 @@
 #include "Abstractor.h"
 
 /**
- * @brief [AI GENERATED] Converts note events into audio samples.
+ * @brief [AI GENERATED] Converts note events into audio samples. Supports
+ * overlapping notes for simple chord playback.
  */
 class NoteSynth {
 public:
     /**
      * @brief [AI GENERATED] Convert note events to samples using an
-     * exponential decay envelope.
+     * attack-sustain-release envelope.
      *
      * @param events Sequence of notes to synthesize.
      * @param sampleRate Target sample rate for output audio.
