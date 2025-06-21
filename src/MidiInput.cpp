@@ -5,6 +5,8 @@
  *        several small chords.
  */
 std::vector<MidiMessage> MidiInput::generateDemo() const {
+    // Opening phrase with two short chords at the beginning.
+
     const int kNotes[] = {76, 80, 83, 75, 76, 75, 76, 71, 74, 73, 69};
     const double kDurations[] = {0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 1.6};
 
@@ -22,7 +24,6 @@ std::vector<MidiMessage> MidiInput::generateDemo() const {
     dCurrentTime += kDurations[3];
     // Remaining notes are played sequentially.
     for (size_t i = 5; i < sizeof(kNotes) / sizeof(kNotes[0]); ++i) {
-
         messages.push_back({kNotes[i], kDurations[i], dCurrentTime});
         dCurrentTime += kDurations[i];
     }

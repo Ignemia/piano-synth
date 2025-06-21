@@ -11,10 +11,11 @@ std::vector<double> NoteSynth::synthesize(const std::vector<NoteEvent>& events,
                                           int sampleRate) const {
     const double kHammerTime = 0.02;
     const double kAttackTime = 0.005;
-    const double kSustainFraction = 0.7;
+    const double kReleaseTime = 0.3;
     double dTotalDuration = 0.0;
     for (const auto& e : events) {
-        dTotalDuration = std::max(dTotalDuration, e.startTime + e.duration);
+        double dEnd = e.startTime + e.duration + kReleaseTime;
+        dTotalDuration = std::max(dTotalDuration, dEnd);
     }
 
     const int iTotalSamples = static_cast<int>(dTotalDuration * sampleRate);
@@ -22,12 +23,14 @@ std::vector<double> NoteSynth::synthesize(const std::vector<NoteEvent>& events,
 
     for (const auto& e : events) {
         const int iStart = static_cast<int>(e.startTime * sampleRate);
-        const int iCount = static_cast<int>(e.duration * sampleRate);
+        const int iHold = static_cast<int>(e.duration * sampleRate);
+        const int iRelease = static_cast<int>(kReleaseTime * sampleRate);
+        const int iCount = iHold + iRelease;
+
         const int iHammerSamples =
             std::min(static_cast<int>(kHammerTime * sampleRate), iCount);
         const int iAttackSamples =
             std::min(static_cast<int>(kAttackTime * sampleRate), iCount);
-        const int iSustainStart = static_cast<int>(kSustainFraction * iCount);
         for (int i = 0; i < iCount; ++i) {
             const double dPhase = 2.0 * M_PI * e.frequency * static_cast<double>(i) / sampleRate;
             double dValue = 0.0;
@@ -43,10 +46,10 @@ std::vector<double> NoteSynth::synthesize(const std::vector<NoteEvent>& events,
             double dEnvelope = 1.0;
             if (i < iAttackSamples) {
                 dEnvelope *= static_cast<double>(i) / iAttackSamples;
-            } else if (i > iSustainStart) {
-                const double dRelease = static_cast<double>(i - iSustainStart);
-                const double dReleaseLen = static_cast<double>(iCount - iSustainStart);
-                dEnvelope = std::exp(-3.0 * dRelease / dReleaseLen);
+            } else if (i >= iHold) {
+                const double dRelease = static_cast<double>(i - iHold);
+                const double dReleaseLen = static_cast<double>(iRelease);
+                dEnvelope = std::exp(-2.0 * dRelease / dReleaseLen);
             }
 
             samples[iStart + i] += dEnvelope * dValue;
