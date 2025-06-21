@@ -4,7 +4,8 @@
 #include <algorithm>
 
 /**
- * @brief [AI GENERATED] Generate samples with a sustain phase and hammer noise.
+ * @brief [AI GENERATED] Generate samples using multiple harmonics with
+ *        subtle hammer noise.
  */
 std::vector<double> NoteSynth::synthesize(const std::vector<NoteEvent>& events,
                                           int sampleRate) const {
@@ -29,21 +30,25 @@ std::vector<double> NoteSynth::synthesize(const std::vector<NoteEvent>& events,
         const int iSustainStart = static_cast<int>(kSustainFraction * iCount);
         for (int i = 0; i < iCount; ++i) {
             const double dPhase = 2.0 * M_PI * e.frequency * static_cast<double>(i) / sampleRate;
-            double dValue = std::sin(dPhase) + 0.2 * std::sin(2.0 * dPhase);
+            double dValue = 0.0;
+            for (int h = 1; h <= 4; ++h) {
+                double hAmp = std::exp(-0.001 * h * i) / h;
+                dValue += hAmp * std::sin(h * dPhase);
+            }
             if (i < iHammerSamples) {
                 const double dNoise = static_cast<double>(std::rand()) / RAND_MAX * 2.0 - 1.0;
                 const double dHammerEnv = 1.0 - static_cast<double>(i) / iHammerSamples;
-                dValue += 0.02 * dHammerEnv * dNoise;
+                dValue += 0.005 * dHammerEnv * dNoise;
             }
             double dEnvelope = 1.0;
             if (i < iAttackSamples) {
                 dEnvelope *= static_cast<double>(i) / iAttackSamples;
             } else if (i > iSustainStart) {
-
                 const double dRelease = static_cast<double>(i - iSustainStart);
                 const double dReleaseLen = static_cast<double>(iCount - iSustainStart);
                 dEnvelope = std::exp(-3.0 * dRelease / dReleaseLen);
             }
+
             samples[iStart + i] += dEnvelope * dValue;
         }
     }
