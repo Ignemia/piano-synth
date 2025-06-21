@@ -27,35 +27,33 @@ std::vector<double> NoteSynth::synthesize(const std::vector<NoteEvent>& events,
         const int iRelease = static_cast<int>(kReleaseTime * sampleRate);
         const int iCount = iHold + iRelease;
 
-        // Envelope timing (ADSR) - grand piano with sustain pedal
-        const double kAttackTime = 0.002; // Very fast attack like hammer strike
-        const double kDecayTime = 0.8;    // Longer decay for string resonance
-        const double kSustainLevel = 0.4;  // Higher sustain with pedal pressed
+        // Envelope timing (ADSR) - natural piano with proper sustain
+        const double kAttackTime = 0.001; // Very fast attack like hammer strike
+        const double kDecayTime = 0.4;    // Moderate decay for natural sound
+        const double kSustainLevel = 0.35; // Natural sustain level
         
         const int iAttackSamples = static_cast<int>(kAttackTime * sampleRate);
         const int iDecaySamples = static_cast<int>(kDecayTime * sampleRate);
 
-        // Determine number of harmonics based on frequency (grand piano characteristics)
+        // Determine number of harmonics based on frequency (natural piano brightness)
         int iMaxHarmonics;
         if (e.frequency < 130.0) {
-            iMaxHarmonics = 30; // Bass: rich harmonic content like real grand piano
+            iMaxHarmonics = 15; // Bass: rich harmonic content for warmth
         } else if (e.frequency < 520.0) {
-            iMaxHarmonics = 15; // Mid: moderate harmonics
+            iMaxHarmonics = 12; // Mid: good harmonic content for brightness
         } else {
-            iMaxHarmonics = 8;  // Treble: fewer harmonics as frequency increases
+            iMaxHarmonics = 8;  // Treble: moderate harmonics for clarity
         }
 
-        // Inharmonicity factor (grand piano string stiffness)
-        const double B = (e.frequency / 27.5) * 0.00003; // Realistic inharmonicity for grand piano
+        // Minimal inharmonicity for natural sound
+        const double B = 0.0; // Remove inharmonicity to eliminate beating
 
         // Velocity-dependent brightness (simulate hammer-string interaction)
-        // Use default velocity since NoteEvent doesn't have amplitude field
-        const double dVelocity = 0.7; // Moderate velocity for realistic sound
-        const int iActiveHarmonics = static_cast<int>(iMaxHarmonics * (0.4 + 0.6 * dVelocity));
+        // Use actual velocity from key press event
+        const double dVelocity = std::min(1.0, std::max(0.1, e.velocity)); // Clamp velocity to reasonable range
+        const int iActiveHarmonics = static_cast<int>(iMaxHarmonics * (0.3 + 0.7 * dVelocity));
 
-        // Hammer noise parameters
-        const double kHammerTime = 0.01;
-        const int iHammerSamples = static_cast<int>(kHammerTime * sampleRate);
+        // No hammer noise - clean sine waves only
 
         for (int i = 0; i < iCount; ++i) {
             const double t = static_cast<double>(i) / sampleRate;
@@ -91,48 +89,33 @@ std::vector<double> NoteSynth::synthesize(const std::vector<NoteEvent>& events,
                 // Harmonic amplitude with velocity dependence
                 double dHarmonicAmp = 1.0 / h; // Basic 1/n falloff
                 
-                // Grand piano harmonic shaping (velocity-dependent brightness)
+                // Velocity-dependent harmonic amplitude scaling
                 if (h > 1) {
-                    // Higher harmonics boosted by velocity (hammer hardness effect)
-                    dHarmonicAmp *= (0.3 + 0.9 * dVelocity * std::exp(-0.2 * (h - 1)));
+                    // Higher harmonics affected by velocity (harder strikes = more upper harmonics)
+                    dHarmonicAmp *= (0.4 + 0.6 * dVelocity) * std::exp(-0.15 * (h - 1));
                 }
                 
-                // Grand piano string decay characteristics (with sustain pedal)
+                // Natural string decay characteristics
                 double dHarmonicDecay;
                 if (h == 1) {
-                    // Fundamental: very slow decay with sustain pedal
-                    dHarmonicDecay = std::exp(-t * 0.02);
-                } else if (h <= 5) {
-                    // Low harmonics: slow decay with sustain pedal
-                    dHarmonicDecay = std::exp(-t * (0.03 + 0.02 * h));
+                    // Fundamental: slow decay for sustain
+                    dHarmonicDecay = std::exp(-t * 0.15);
+                } else if (h <= 4) {
+                    // Low harmonics: moderate decay for warmth
+                    dHarmonicDecay = std::exp(-t * (0.2 + 0.1 * h));
                 } else {
-                    // High harmonics: moderate decay even with sustain pedal
-                    dHarmonicDecay = std::exp(-t * (0.08 + 0.04 * h));
+                    // High harmonics: faster decay but not too fast
+                    dHarmonicDecay = std::exp(-t * (0.4 + 0.2 * h));
                 }
                 dHarmonicAmp *= dHarmonicDecay;
                 
-                // Add subtle string resonance modulation
-                double dResonance = 1.0 + 0.02 * std::sin(2.0 * M_PI * 5.0 * t) * std::exp(-t * 2.0);
-                
-                dValue += dHarmonicAmp * std::sin(dPhase) * dResonance;
+                dValue += dHarmonicAmp * std::sin(dPhase);
             }
 
-            // Add hammer noise and soundboard resonance
-            if (i < iHammerSamples) {
-                const double dNoise = static_cast<double>(std::rand()) / RAND_MAX * 2.0 - 1.0;
-                const double dHammerEnv = (1.0 - static_cast<double>(i) / iHammerSamples);
-                const double dNoiseAmp = 0.002 * dVelocity * dHammerEnv;
-                dValue += dNoiseAmp * dNoise;
-            }
-            
-            // Soundboard resonance (adds body to the sound)
-            if (t < 0.1) {
-                double dSoundboard = 0.1 * std::sin(2.0 * M_PI * e.frequency * 0.5 * t) * std::exp(-t * 8.0);
-                dValue += dSoundboard;
-            }
+            // No noise - pure sine waves only
 
-            // Apply overall amplitude scaling
-            dValue *= 0.8; // Moderate scaling for realistic grand piano volume
+            // Apply velocity-dependent amplitude scaling
+            dValue *= dVelocity * 0.8; // Scale by velocity for realistic dynamics
 
             samples[iStart + i] += dEnvelope * dValue;
         }
