@@ -1,8 +1,4 @@
-/**
- * @file NoteSynth.h
- * @brief [AI GENERATED] Basic oscillator-based synth emulating string
- * harmonics with subtle hammer noise and a short release tail.
- */
+
 
 #pragma once
 #include <vector>
@@ -22,6 +18,7 @@ public:
      * @param sampleRate Target sample rate for output audio.
      * @return Vector containing synthesized PCM samples.
      */
+
     std::vector<double> synthesize(const std::vector<NoteEvent>& events,
                                    int sampleRate = 44100) const;
 };

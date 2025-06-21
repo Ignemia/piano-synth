@@ -26,6 +26,7 @@ std::vector<double> NoteSynth::synthesize(const std::vector<NoteEvent>& events,
         const int iHold = static_cast<int>(e.duration * sampleRate);
         const int iRelease = static_cast<int>(kReleaseTime * sampleRate);
         const int iCount = iHold + iRelease;
+
         const int iHammerSamples =
             std::min(static_cast<int>(kHammerTime * sampleRate), iCount);
         const int iAttackSamples =
@@ -50,6 +51,7 @@ std::vector<double> NoteSynth::synthesize(const std::vector<NoteEvent>& events,
                 const double dReleaseLen = static_cast<double>(iRelease);
                 dEnvelope = std::exp(-2.0 * dRelease / dReleaseLen);
             }
+
             samples[iStart + i] += dEnvelope * dValue;
         }
     }
