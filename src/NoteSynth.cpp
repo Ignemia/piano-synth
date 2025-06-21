@@ -39,6 +39,7 @@ std::vector<double> NoteSynth::synthesize(const std::vector<NoteEvent>& events,
             if (i < iAttackSamples) {
                 dEnvelope *= static_cast<double>(i) / iAttackSamples;
             } else if (i > iSustainStart) {
+
                 const double dRelease = static_cast<double>(i - iSustainStart);
                 const double dReleaseLen = static_cast<double>(iCount - iSustainStart);
                 dEnvelope = std::exp(-3.0 * dRelease / dReleaseLen);
