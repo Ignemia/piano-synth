@@ -40,8 +40,15 @@ int main() {
     int firstCount = static_cast<int>(notes[0].duration * 8000);
     int sustainIdx = static_cast<int>(firstCount * 0.7);
     int endIdx = firstCount - 1;
-    assert(samples[0] != 0.0 || samples[1] != 0.0);
+    int attackIdx = static_cast<int>(0.005 * 8000);
+    assert(samples[attackIdx] > samples[0]);
     assert(std::abs(samples[endIdx]) < std::abs(samples[sustainIdx]));
+
+    double maxVal = 0.0;
+    for (double s : samples) {
+        maxVal = std::max(maxVal, std::abs(s));
+    }
+    assert(maxVal <= 1.0);
 
     OutputHandler out;
     const std::string file = "test.wav";
