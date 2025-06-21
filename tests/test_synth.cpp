@@ -23,6 +23,14 @@ int main() {
     auto samples = synth.synthesize(notes, 8000);
     assert(!samples.empty());
 
+    int firstCount = static_cast<int>(notes[0].duration * 8000);
+    int quarterIdx = static_cast<int>(8000 / (4.0 * notes[0].frequency));
+    if (quarterIdx >= firstCount) {
+        quarterIdx = 0;
+    }
+    int endIdx = firstCount - quarterIdx - 1;
+    assert(std::abs(samples[endIdx]) < std::abs(samples[quarterIdx]));
+
     OutputHandler out;
     const std::string file = "test.wav";
     out.writeWav(samples, file, 8000);
