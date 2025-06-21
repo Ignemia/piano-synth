@@ -1,14 +1,15 @@
 #include "MidiInput.h"
 
 /**
- * @brief [AI GENERATED] Generates a short melody.
+ * @brief [AI GENERATED] Generates the opening phrase of Fur Elise with
+ *        extended key presses.
  */
 std::vector<MidiMessage> MidiInput::generateDemo() const {
-    int tune[] = {64, 62, 60, 62, 64, 64, 64, 62, 62, 62, 64, 67, 67};
-    const double dur = 0.5;
+    const int kNotes[] = {76, 75, 76, 75, 76, 71, 74, 73, 69};
+    const double kDurations[] = {0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 1.6};
     std::vector<MidiMessage> messages;
-    for (int n : tune) {
-        messages.push_back({n, dur});
+    for (size_t i = 0; i < sizeof(kNotes) / sizeof(kNotes[0]); ++i) {
+        messages.push_back({kNotes[i], kDurations[i]});
     }
     return messages;
 }
