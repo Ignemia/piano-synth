@@ -1,7 +1,7 @@
-#include "MidiInput.h"
-#include "Abstractor.h"
-#include "NoteSynth.h"
-#include "OutputHandler.h"
+#include "../include/MidiInput.h"
+#include "../include/Abstractor.h"
+#include "../include/NoteSynth.h"
+#include "../include/OutputHandler.h"
 #include <iostream>
 #include <string>
 
@@ -13,7 +13,7 @@ int main(int argc, char* argv[]) {
     if (argc < 2) {
         std::cout << "Usage: " << argv[0] << " [options]\n";
         std::cout << "Available test pieces:\n";
-        std::cout << "  --demo          Default demo (Rush E)\n";
+        std::cout << "  --demo          Generate all 5 test pieces\n";
         std::cout << "  --rush-e        Rush E virtuosic passages\n";
         std::cout << "  --fur-elise     Für Elise opening melody\n";
         std::cout << "  --beethoven5    Beethoven's 5th Symphony opening\n";
@@ -25,6 +25,9 @@ int main(int argc, char* argv[]) {
         std::cout << "  --beethoven5-keys Beethoven's 5th with key expression\n";
         std::cout << "  --hall-mountain-keys Hall of Mountain King with key dynamics\n";
         std::cout << "  --vivaldi-spring-keys Vivaldi Spring with key expression\n";
+        std::cout << "M-Audio Oxygen Pro 61 specific features:\n";
+        std::cout << "  --drum-pattern   Drum pattern using 8 velocity-sensitive pads\n";
+        std::cout << "  --mixed-performance Piano + drums mixed performance\n";
         return 1;
     }
 
@@ -37,8 +40,35 @@ int main(int argc, char* argv[]) {
     std::vector<NoteEvent> notes;
     std::string outputFile;
 
+    // Handle demo option - generate all 5 test pieces
+    if (option == "--demo") {
+        // Generate all 5 pieces with key-based synthesis
+        std::vector<std::pair<std::string, std::string>> pieces = {
+            {"fur_elise_demo.wav", "Für Elise"},
+            {"rush_e_demo.wav", "Rush E"},
+            {"beethoven5_demo.wav", "Beethoven's 5th"},
+            {"hall_mountain_demo.wav", "Hall of Mountain King"},
+            {"vivaldi_spring_demo.wav", "Vivaldi Spring"}
+        };
+        
+        for (size_t i = 0; i < pieces.size(); ++i) {
+            std::vector<KeyEvent> keyEvents;
+            switch (i) {
+                case 0: keyEvents = midi.generateFurEliseKeys(); break;
+                case 1: keyEvents = midi.generateRushEKeys(); break;
+                case 2: keyEvents = midi.generateBeethoven5thKeys(); break;
+                case 3: keyEvents = midi.generateHallOfMountainKingKeys(); break;
+                case 4: keyEvents = midi.generateVivaldiSpringKeys(); break;
+            }
+            auto pieceNotes = abs.convertKeyEvents(keyEvents);
+            auto pieceSamples = synth.synthesize(pieceNotes);
+            out.writeWav(pieceSamples, pieces[i].first);
+            std::cout << pieces[i].second << " written to " << pieces[i].first << "\n";
+        }
+        return 0;
+    }
     // Handle key-based synthesis options
-    if (option == "--fur-elise-keys") {
+    else if (option == "--fur-elise-keys") {
         auto keyEvents = midi.generateFurEliseKeys();
         notes = abs.convertKeyEvents(keyEvents);
         outputFile = "fur_elise_keys_output.wav";
@@ -63,9 +93,19 @@ int main(int argc, char* argv[]) {
         notes = abs.convertKeyEvents(keyEvents);
         outputFile = "vivaldi_spring_keys_output.wav";
         std::cout << "Vivaldi Spring (key-based) written to " << outputFile << "\n";
+    } else if (option == "--drum-pattern") {
+        auto keyEvents = midi.generateDrumPattern();
+        notes = abs.convertKeyEvents(keyEvents);
+        outputFile = "drum_pattern_output.wav";
+        std::cout << "Drum pattern written to " << outputFile << "\n";
+    } else if (option == "--mixed-performance") {
+        auto keyEvents = midi.generateMixedPerformance();
+        notes = abs.convertKeyEvents(keyEvents);
+        outputFile = "mixed_performance_output.wav";
+        std::cout << "Mixed performance (piano + drums) written to " << outputFile << "\n";
     }
     // Handle legacy MIDI-based synthesis options
-    else if (option == "--demo" || option == "--rush-e") {
+    else if (option == "--rush-e") {
         auto midiData = midi.generateRushE();
         notes = abs.convert(midiData);
         outputFile = "rush_e_output.wav";

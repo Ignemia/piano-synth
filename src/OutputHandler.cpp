@@ -2,7 +2,6 @@
 #include <fstream>
 #include <cstdint>
 #include <vector>
-#include <cmath>
 
 /**
  * @brief [AI GENERATED] Helper to write little-endian integers.
